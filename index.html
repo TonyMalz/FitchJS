@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+    <title>Fitch Editor</title>
+    <meta charset="utf-8">
+    <style>
+        .editor
+        {   
+            border: 1px solid black;
+            width: 90%;
+            height: 20px;
+            font-family: "Consolas";
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="setCursor()">set cursor</button>
+    <div id="l1" class="editor" contenteditable="true" spellcheck="false">Line 1</div>
+    <div id="l2" class="editor" contenteditable="true" spellcheck="false">Line 2</div>
+    <div id="l3" class="editor" contenteditable="true" spellcheck="false">Line 3</div>
+   <div id="caretPos"></div>
+   
+    <div class="codeoutput">
+        <pre class="htmloutput">
+        </pre>
+    </div>
+</body>
+<script src='main.js'></script>
+<script src='parser.js'></script>
+</html>
