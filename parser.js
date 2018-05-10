@@ -28,7 +28,7 @@ class Token {
             case "string":
                 return this.lexeme; 
             case "number":
-                return this.pos;
+                return this.type;
             case "default":
                 return this.type;
         }
@@ -74,7 +74,7 @@ class Scanner {
     }
 
     scanToken() {
-        let c = this.advance();
+        const c = this.advance();
         switch (c) {
             case '(' :
                 this.addToken(TokenType.LEFT_PAREN);
@@ -266,7 +266,7 @@ class Parser {
     }
 
     match(...types){
-        for (let type of types) {
+        for (const type of types) {
             if (this.check(type)) {
                 this.advance();
                 return true;
@@ -435,16 +435,16 @@ class Parser {
 
     term(){
         if(this.match(TokenType.TRUE, TokenType.FALSE, TokenType.NUMBER)){
-            return new FormulaConstant(this.previous());
+            return new TermConstant(this.previous());
         }
         if(this.match(TokenType.IDENTIFIER)){
             const identifier = this.previous();
             if (this.match(TokenType.LEFT_PAREN)){
                 const terms = this.term_list();
                 this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list.");
-                return new FormulaFunc(identifier,terms);
+                return new TermFunction(identifier,terms);
             }
-            return new FormulaVariable(identifier);
+            return new TermVariable(identifier);
         }
         throw this.error(this.peek(), "Expected a term.");
     }
@@ -469,9 +469,23 @@ class ParseError extends Error {
 }
 
 
-
 class Formula {
-
+    constructor(){
+        this.isPremise = false;
+        this.isConclusion = false;
+        this.isValid = false;
+        this.rule = null;
+    }
+    checkRule(){
+        if (! this.rule instanceof Rule){
+            console.error('no rule given');
+            return false;
+        }
+        return this.rule.validate(this);
+    }
+    setRule(rule) {
+        this.rule = rule;
+    }
 }
 
 class FormulaUnary extends Formula {
@@ -534,6 +548,19 @@ class FormulaAnd extends Formula {
         this.terms = terms; //Array Formula
         this.connectives = connectives; //Array Token
     }
+    isEqualTo(formula){
+        if (formula instanceof FormulaAnd){
+            if (this.term.length !== formula.terms.length)
+                return false;
+
+            for (const i in this.terms) {
+                if (! this.terms[i].isEqualTo(formula.terms[i]))
+                    return false;
+            }
+            return true;
+        }
+        return false;
+    }
 }
 class FormulaOr extends Formula {
     constructor(terms, connectives ) {
@@ -543,19 +570,27 @@ class FormulaOr extends Formula {
     }
 }
 
-class FormulaVariable extends Formula {
+class Term extends Formula {
     constructor(name) {
         super();
         this.name = name; //Token
     }
-}
-class FormulaConstant extends Formula {
-    constructor(name) {
-        super();
-        this.name = name; //Token
+    toString(){
+        let str = '';
+        if (this.name instanceof Token){
+            str += this.name.lexeme;
+        }
+        if(this.args instanceof Array){
+            str +='('+ this.args.join() + ')';
+        }
+        return str;
     }
 }
-class FormulaFunc extends Formula {
+class TermVariable extends Term {  
+}
+class TermConstant extends Term {
+}
+class TermFunction extends Term {
     constructor(name, args) {
         super();
         this.name = name; //Token
@@ -563,16 +598,71 @@ class FormulaFunc extends Formula {
     }
 }
 
-let sy = '∀x ∀t (Zuhause(x, t) → ¬AmTatort(x, t))'
-let sy2 = '(Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c)))'
-let sy3 = 'Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c))'
-let sy4 = '∀x∀y(P(f(x)) → ¬(P(x) → Q(f(y),x,z)))'
-const tokens = new Scanner(sy4,1).scanTokens();
+class Rule {
+    validate(formula){
+        console.error('validate rule not implemented')
+        return false;
+    }
+}
+class RuleAndElim extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof FormulaAnd)) {
+            console.error('Expected formula of type FormulaAnd as source');
+            return false;
+        }
+        for (const term of this.source.terms){
+            //FIXME
+            console.log(String(formula),String(term))
+            if (String(formula) === String(term))
+                return true;
+        }
+        
+        return false;
+    }
+
+}
+
+function parseLine(text,lineNo=1){
+    return new Parser(new Scanner(text,lineNo).scanTokens()).parse();
+}
+
+function justifyLine(line,rule){
+    line.setRule(rule);
+    return line.checkRule();
+}
+
+const l1 = '∀x ∀t (Zuhause(x, t) → ¬AmTatort(x, t))'
+const l2 = '(Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c)))'
+const l3 = 'Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c))'
+const l4 = 'Tet(a) ∧ (Tet(b) ∧ Tet(c))'
+const l5 = '∀x∀y(P(f(x)) → ¬(P(x) → Q(f(y),x,z)))'
+const l6 = ' Tet    (c) '
+
+//const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
-const form  = new Parser(tokens).parse();
-console.log(form)
-const $ = document.querySelector.bind(document);
-const $$ = document.querySelectorAll.bind(document);
+//console.log(1 + tokens[0])
+const line1 = parseLine(l1)
+const line2 = parseLine(l2)
+const line3 = parseLine(l3)
+const line4 = parseLine(l4)
+const line5 = parseLine(l5)
+const line6 = parseLine(l6)
+//console.log(line5)
+console.log( justifyLine(line6, new RuleAndElim(line3) ))
+console.log( justifyLine(line6, new RuleAndElim(line2) ))
+console.log( justifyLine(line6, new RuleAndElim(line4) ))
+
+//const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
+//const andElim = new AndElim(1,2)
+//form.addRule(andElim)
+//console.log(line3)
+
+//const $ = document.querySelector.bind(document);
+//const $$ = document.querySelectorAll.bind(document);
 //let sy = '∀Hello or ⊥ and bye() → 12.6'
 //console.log( new Scanner(sy,1).scanTokens())
 //console.log(String(new Token(TokenType.LESS_EQUAL,'<=')) + 'test')
