@@ -463,6 +463,11 @@ class Parser {
         if(this.match(TokenType.IDENTIFIER)){
             const identifier = this.previous();
             if (this.match(TokenType.LEFT_PAREN)){
+                //FIXME allow arity 0 => Tet() ?
+                if (this.match(TokenType.RIGHT_PAREN)) {
+                    console.log('empty arg list');
+                    return new TermFunction(identifier,[]);
+                }
                 const terms = this.term_list();
                 this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list.");
                 return new TermFunction(identifier,terms);
@@ -646,7 +651,6 @@ class RuleAndElim extends Rule{
             if (String(formula) === String(term))
                 return true;
         }
-        
         return false;
     }
 }
@@ -691,6 +695,56 @@ class RuleAndIntro extends Rule{
     }
 }
 
+class RuleNegationElim extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof FormulaNot)) {
+            console.error('Expected formula of type FormulaNot as source');
+            return false;
+        }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+        if (!(this.source.right instanceof FormulaNot)) {
+            console.error('Expected source formula of being double-negation');
+            return false;
+        }
+        //FIXME check for smaller line no and scope
+        console.log(String(formula),String(this.source.right.right))
+        if (String(formula) === String(this.source.right.right))
+            return true;
+        
+        return false;
+    }
+}
+
+class RuleOrIntro extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof Formula)) {
+            console.error('source must be a formula');
+            return false;
+        }
+        if (!(formula instanceof FormulaOr)) {
+            console.error('Expected formula of type FormulaOr');
+            return false;
+        }
+        for (const term of formula.terms){
+            console.log(String(term),String(this.source))
+            if (String(term) === String(this.source))
+                return true;
+        }
+        return false;
+    }
+}
+
 let gLineNo = 0;
 function parseLine(text){
     return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
@@ -713,6 +767,10 @@ const l5 = '∀x∀y(P(f(x)) → ¬(P(x) → Q(f(y),x,z)))'
 const l6 = ' Tet    (c) '
 const l7 = ' Tet(peter) '
 const l8 = ' Tet(peter) ∧ Tet(c) '
+const l9 = '¬¬Peter'
+const l10 = ' Peter'
+const l11 = 'Hans ∨ Peter ∨ Otto'
+const l12 = 'Hans ∨ (Tet(peter) ∧ Tet(c)) ∨ Otto'
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
 //console.log(1 + tokens[0])
@@ -724,15 +782,23 @@ const line5 = parseLine(l5)
 const line6 = parseLine(l6)
 const line7 = parseLine(l7)
 const line8 = parseLine(l8)
+const line9 = parseLine(l9)
+const line10 = parseLine(l10)
+const line11 = parseLine(l11)
+const line12 = parseLine(l12)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
 console.log( justifyLine(line6, new RuleAndElim(line4) ))
 //console.log( line5)
-console.log( line1 +'')
+console.log( String(line5))
 console.log( justifyLine(line8, new RuleAndIntro(line6,line7) ))
 
 console.log(line8.isValid)
+
+console.log( justifyLine(line10, new RuleNegationElim(line9)))
+console.log( justifyLine(line11, new RuleOrIntro(line10)))
+console.log( justifyLine(line12, new RuleOrIntro(line8)))
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
