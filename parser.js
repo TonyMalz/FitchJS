@@ -630,7 +630,7 @@ class RuleAndElim extends Rule{
             return false;
         }
         for (const term of this.source.terms){
-            //FIXME
+            //FIXME check for smaller line no and scope
             console.log(String(formula),String(term))
             if (String(formula) === String(term))
                 return true;
@@ -638,7 +638,41 @@ class RuleAndElim extends Rule{
         
         return false;
     }
-
+}
+class RuleAndIntro extends Rule{
+    constructor(...source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        this.source.forEach(sourceForm => {
+            if (!(sourceForm instanceof Formula)) {
+                console.error('Expected a formula as source');
+                return false;
+            }
+        });
+        if (!(formula instanceof FormulaAnd)) {
+                console.error('Expected formula to validate to be of type FormulaAnd');
+                return false;
+            }
+        let found = false;
+        for (const term of formula.terms){
+            //FIXME check for smaller line no and scope
+            for (const sourceTerm of this.source){
+                //console.log(String(term),String(sourceTerm))
+                if (String(term) === String(sourceTerm)){
+                    found = true;
+                    break;
+                }
+            }
+            if (!found){
+                console.error(`Did not find ${term} in any source formula`);
+                return false;
+            }
+        }
+        
+        return true;
+    }
 }
 
 function parseLine(text,lineNo=1){
@@ -656,7 +690,8 @@ const l3 = 'Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c)
 const l4 = 'Tet(a) ∧ (Tet(b) ∧ Tet(c))'
 const l5 = '∀x∀y(P(f(x)) → ¬(P(x) → Q(f(y),x,z)))'
 const l6 = ' Tet    (c) '
-
+const l7 = ' Tet(peter) '
+const l8 = ' Tet(peter) ∧ Tet(c) '
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
 //console.log(1 + tokens[0])
@@ -666,12 +701,17 @@ const line3 = parseLine(l3)
 const line4 = parseLine(l4)
 const line5 = parseLine(l5)
 const line6 = parseLine(l6)
-//console.log(line5)
+const line7 = parseLine(l7)
+const line8 = parseLine(l8)
+
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
 console.log( justifyLine(line6, new RuleAndElim(line4) ))
 console.log( line5 +'')
 console.log( line1 +'')
+console.log( justifyLine(line8, new RuleAndIntro(line6,line7) ))
+
+
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
