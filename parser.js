@@ -498,6 +498,7 @@ class Formula {
         this.isConclusion = false;
         this.isValid = false;
         this.rule = null;
+        this.line = 0;
     }
     checkRule(){
         if (! this.rule instanceof Rule){
@@ -516,6 +517,7 @@ class FormulaUnary extends Formula {
         super();
         this.operator = operator; //Token
         this.right = right;
+        this.line = operator.line;
     }
     toString(){
         return this.operator + this.right;
@@ -529,6 +531,7 @@ class FormulaBinary extends Formula {
         this.left = left;
         this.connective = connective; //Token
         this.right = right;
+        this.line = left.line;
     }
     toString(){
         return '( ' + this.left + ' ' + this.connective + ' ' + this.right + ' )';
@@ -546,6 +549,7 @@ class FormulaQuantified extends Formula {
         this.quantifier = quantifier; //Token
         this.variable = variable; //Token
         this.right = right;
+        this.line = quantifier.line;
     }
     toString(){
         return this.quantifier + this.variable + this.right;
@@ -556,6 +560,7 @@ class FormulaAnd extends Formula {
         super();
         this.terms = terms; //Array Formula
         this.connectives = connectives; //Array Token
+        this.line = terms[0].line;
     }
     isEqualTo(formula){
         if (formula instanceof FormulaAnd){
@@ -579,6 +584,7 @@ class FormulaOr extends Formula {
         super();
         this.terms = terms; //Array Formula
         this.connectives = connectives; //Array Token
+        this.line = terms[0].line;
     }
     toString(){
         return '( ' + this.terms.join(' ∨ ') + ' )';
@@ -589,6 +595,7 @@ class Term extends Formula {
     constructor(name) {
         super();
         this.name = name; //Token
+        this.line = name.line;
     }
     toString(){
         let str = '';
@@ -607,9 +614,9 @@ class TermConstant extends Term {
 }
 class TermFunction extends Term {
     constructor(name, args) {
-        super();
-        this.name = name; //Token
+        super(name);
         this.args = args; //Array Formula
+        this.line = name.line;
     }
 }
 
@@ -629,6 +636,10 @@ class RuleAndElim extends Rule{
             console.error('Expected formula of type FormulaAnd as source');
             return false;
         }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
         for (const term of this.source.terms){
             //FIXME check for smaller line no and scope
             console.log(String(formula),String(term))
@@ -640,25 +651,30 @@ class RuleAndElim extends Rule{
     }
 }
 class RuleAndIntro extends Rule{
-    constructor(...source){
+    constructor(...sources){
         super();
-        this.source = source;
+        this.sources = sources;
     }
     validate(formula) {
-        this.source.forEach(sourceForm => {
+        this.sources.forEach(sourceForm => {
             if (!(sourceForm instanceof Formula)) {
                 console.error('Expected a formula as source');
                 return false;
             }
         });
         if (!(formula instanceof FormulaAnd)) {
-                console.error('Expected formula to validate to be of type FormulaAnd');
-                return false;
-            }
+            console.error('Expected formula to validate to be of type FormulaAnd');
+            return false;
+        }
+
         let found = false;
         for (const term of formula.terms){
             //FIXME check for smaller line no and scope
-            for (const sourceTerm of this.source){
+            for (const sourceTerm of this.sources){
+                if(sourceTerm.line > term.line){
+                    console.error('Source formula must occur before current formula')
+                    return false;
+                }
                 //console.log(String(term),String(sourceTerm))
                 if (String(term) === String(sourceTerm)){
                     found = true;
@@ -675,13 +691,18 @@ class RuleAndIntro extends Rule{
     }
 }
 
-function parseLine(text,lineNo=1){
-    return new Parser(new Scanner(text,lineNo).scanTokens()).parse();
+let gLineNo = 0;
+function parseLine(text){
+    return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
 }
 
 function justifyLine(line,rule){
     line.setRule(rule);
-    return line.checkRule();
+    const result = line.checkRule();
+    if (result === true){
+        line.isValid = true;
+    }
+    return result;
 }
 
 const l1 = '∀x ∀t (Zuhause(x, t) → ¬AmTatort(x, t))'
@@ -707,11 +728,11 @@ const line8 = parseLine(l8)
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
 console.log( justifyLine(line6, new RuleAndElim(line4) ))
-console.log( line5 +'')
+//console.log( line5)
 console.log( line1 +'')
 console.log( justifyLine(line8, new RuleAndIntro(line6,line7) ))
 
-
+console.log(line8.isValid)
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
