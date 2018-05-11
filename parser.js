@@ -26,12 +26,35 @@ class Token {
     [Symbol.toPrimitive](hint) {
         switch (hint) {
             case "string":
-                return this.lexeme; 
+                return this.toString(); 
             case "number":
                 return this.type;
             case "default":
-                return this.type;
+                return this.toString();
         }
+    }
+    toString(){
+        switch (this.type) {
+            case TokenType.AND:
+                return '∧';
+            case TokenType.OR:
+                return '∨';
+            case TokenType.NOT:
+                return '¬';
+            case TokenType.TRUE:
+                return '⊤';
+            case TokenType.FALSE:
+                return '⊥';
+            case TokenType.IMPL:
+                return '→';
+            case TokenType.BI_IMPL:
+                return '↔';
+            case TokenType.FOR_ALL:
+                return '∀';
+            case TokenType.EXISTS:
+                return '∃';
+        }
+        return this.lexeme;
     }
 };
 
@@ -494,13 +517,11 @@ class FormulaUnary extends Formula {
         this.operator = operator; //Token
         this.right = right;
     }
-}
-class FormulaNot extends Formula {
-    constructor(operator, right) {
-        super();
-        this.operator = operator; //Token
-        this.right = right;
+    toString(){
+        return this.operator + this.right;
     }
+}
+class FormulaNot extends FormulaUnary {
 }
 class FormulaBinary extends Formula {
     constructor(left, connective, right) {
@@ -509,22 +530,15 @@ class FormulaBinary extends Formula {
         this.connective = connective; //Token
         this.right = right;
     }
-}
-class FormulaImpl extends Formula {
-    constructor(left, connective, right) {
-        super();
-        this.left = left;
-        this.connective = connective; //Token
-        this.right = right;
+    toString(){
+        return '( ' + this.left + ' ' + this.connective + ' ' + this.right + ' )';
     }
 }
-class FormulaBiImpl extends Formula {
-    constructor(left, connective, right) {
-        super();
-        this.left = left;
-        this.connective = connective; //Token
-        this.right = right;
-    }
+class FormulaImpl extends FormulaBinary {
+}
+class FormulaBiImpl extends FormulaBinary {
+}
+class FormulaEquality extends FormulaBinary {
 }
 class FormulaQuantified extends Formula {
     constructor(quantifier, variable, right) {
@@ -533,13 +547,8 @@ class FormulaQuantified extends Formula {
         this.variable = variable; //Token
         this.right = right;
     }
-}
-class FormulaEquality extends Formula {
-    constructor(left, connective, right) {
-        super();
-        this.left = left;
-        this.connective = connective; //Token
-        this.right = right;
+    toString(){
+        return this.quantifier + this.variable + this.right;
     }
 }
 class FormulaAnd extends Formula {
@@ -561,12 +570,18 @@ class FormulaAnd extends Formula {
         }
         return false;
     }
+    toString(){
+        return '( ' + this.terms.join(' ∧ ') + ' )';
+    }
 }
 class FormulaOr extends Formula {
     constructor(terms, connectives ) {
         super();
         this.terms = terms; //Array Formula
         this.connectives = connectives; //Array Token
+    }
+    toString(){
+        return '( ' + this.terms.join(' ∨ ') + ' )';
     }
 }
 
@@ -655,7 +670,8 @@ const line6 = parseLine(l6)
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
 console.log( justifyLine(line6, new RuleAndElim(line4) ))
-
+console.log( line5 +'')
+console.log( line1 +'')
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
