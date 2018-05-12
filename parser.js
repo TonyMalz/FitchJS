@@ -736,11 +736,91 @@ class RuleOrIntro extends Rule{
             console.error('Expected formula of type FormulaOr');
             return false;
         }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
         for (const term of formula.terms){
             console.log(String(term),String(this.source))
             if (String(term) === String(this.source))
                 return true;
         }
+        return false;
+    }
+}
+
+class RuleBottomElim extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof Term)) {
+            console.error('source must be a term');
+            return false;
+        }
+        if (!(formula instanceof Formula)) {
+            console.error('Expected a formula');
+            return false;
+        }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+        if (this.source.name.type === TokenType.FALSE){
+            return true;
+        }
+        return false;
+    }
+}
+
+class RuleBottomIntro extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources;
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Exactly two premises are needed as source');
+            return false;
+        }
+        this.sources.forEach(sourceForm => {
+            if (!(sourceForm instanceof Formula)) {
+                console.error('Expected a formula as source');
+                return false;
+            }
+        });
+
+        if (!(formula instanceof Term)) {
+            console.error('Expected formula to validate to be of type Term');
+            return false;
+        }
+        if (formula.name.type !== TokenType.FALSE){
+            console.error('Expected formula to validate to be of type TermConstant Bottom/False');
+            return false;
+        }
+
+        //FIXME check for smaller line no and scope
+        let sourceTerm1 = this.sources[0];
+        let sourceTerm2 = this.sources[1];
+        if(sourceTerm1.line > formula.line || sourceTerm2.line > formula.line ){
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+        let notsTerm1 = 0;
+        let notsTerm2 = 0;
+        while (sourceTerm1 instanceof FormulaNot) {
+            sourceTerm1 = sourceTerm1.right;
+            notsTerm1++;
+        }
+        while (sourceTerm2 instanceof FormulaNot) {
+            sourceTerm2 = sourceTerm2.right;
+            notsTerm2++;
+        }
+        if (String(sourceTerm1) === String(sourceTerm2) && notsTerm1 !== notsTerm2 ) {
+            return true;
+        }
+
         return false;
     }
 }
@@ -771,6 +851,10 @@ const l9 = '¬¬Peter'
 const l10 = ' Peter'
 const l11 = 'Hans ∨ Peter ∨ Otto'
 const l12 = 'Hans ∨ (Tet(peter) ∧ Tet(c)) ∨ Otto'
+const l13 = '⊥'
+const l14 = 'Lulu(a,b,c)'
+const l15 = '¬Peter'
+const l16 = '⊥'
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
 //console.log(1 + tokens[0])
@@ -786,6 +870,10 @@ const line9 = parseLine(l9)
 const line10 = parseLine(l10)
 const line11 = parseLine(l11)
 const line12 = parseLine(l12)
+const line13 = parseLine(l13)
+const line14 = parseLine(l14)
+const line15 = parseLine(l15)
+const line16 = parseLine(l16)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
@@ -799,6 +887,9 @@ console.log(line8.isValid)
 console.log( justifyLine(line10, new RuleNegationElim(line9)))
 console.log( justifyLine(line11, new RuleOrIntro(line10)))
 console.log( justifyLine(line12, new RuleOrIntro(line8)))
+console.log( justifyLine(line14, new RuleBottomElim(line13)))
+console.log( justifyLine(line16, new RuleBottomIntro(line15,line10)))
+console.log( justifyLine(line16, new RuleBottomIntro(line15,line9)))
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
