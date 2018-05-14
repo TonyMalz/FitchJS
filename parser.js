@@ -335,7 +335,8 @@ class Parser {
 
     parse(){
         try {
-            const form = this.formula(true);
+            //const form = this.formula(true);
+            const form = this.e0();
             this.checkIsAtEOF();
             return form;
         } catch (error) {
@@ -351,110 +352,80 @@ class Parser {
     }
 
     // recursive decent parsing ahead
-
-    formula(first) {
-        if (this.match(TokenType.NOT)) {
-            const operator = this.previous();
-            const right = this.formula(false);
-            return new FormulaNot(operator, right);
-        }
-
+    e5(){
         if (this.match(TokenType.LEFT_PAREN)) {
-            const left = this.formula(false);
-
-            if (this.match(TokenType.IMPL)) {
-                const connective = this.previous();
-                const right = this.formula(false);
-                this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
-                return new FormulaImpl(left, connective, right);
-            }
-
-            if (this.match(TokenType.BI_IMPL)) {
-                const connective = this.previous();
-                const right = this.formula(false);
-                this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
-                return  new FormulaBiImpl(left, connective, right);
-            }
-
-            if (this.match(TokenType.AND)) {
-                const formulas = [];
-                const connectives = [];
-                formulas.push(left);
-                connectives.push(this.previous());
-                formulas.push(this.formula(false));
-                while (this.match(TokenType.AND)){
-                    connectives.push(this.previous());
-                    formulas.push(this.formula(false));
-                }
-                this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
-                return new FormulaAnd(formulas,connectives);
-            }
-
-            if (this.match(TokenType.OR)) {
-                const formulas = [];
-                const connectives = [];
-                formulas.push(left);
-                connectives.push(this.previous());
-                formulas.push(this.formula(false));
-                while (this.match(TokenType.OR)){
-                    connectives.push(this.previous());
-                    formulas.push(this.formula(false));
-                }
-                this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
-                return new FormulaOr(formulas, connectives);
-            }
-
+            const left = this.e0();
             this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
             return left;
-        }// LEFT_PAREN
+        }
+        return this.term();
+    }
+    e4(){
+        if (this.match(TokenType.NOT)) {
+            const operator = this.previous();
+            const right = this.e0();
+            return new FormulaNot(operator, right);
+        }
+        return this.e5();
+    }
+    e3(){
+        const left = this.e4();
+        if (this.match(TokenType.AND)) {
+            const formulas = [];
+            const connectives = [];
+            formulas.push(left);
+            connectives.push(this.previous());
+            formulas.push(this.e5());
+            while (this.match(TokenType.AND)){
+                connectives.push(this.previous());
+                formulas.push(this.e5());
+            }
+            return new FormulaAnd(formulas,connectives);
+        }
+        return left;
+    }
+    e2(){
+        const left = this.e3();
+        if (this.match(TokenType.OR)) {
+            const formulas = [];
+            const connectives = [];
+            formulas.push(left);
+            connectives.push(this.previous());
+            formulas.push(this.e5());
+            while (this.match(TokenType.OR)){
+                connectives.push(this.previous());
+                formulas.push(this.e5());
+            }
+            return new FormulaOr(formulas,connectives);
+        }
+        return left;
+    }
 
+    e1(){
         if (this.match(TokenType.EXISTS,TokenType.FOR_ALL)) {
             const quantifier = this.previous();
             if(this.match(TokenType.IDENTIFIER)) {
                 const variable = this.previous();
-                const right = this.formula(false);
+                const right = this.e0();
                 return new FormulaQuantified(quantifier, variable, right);
             }
             throw this.error(peek(),"Expected a variable after quantification.");
         }
-
-        const term = this.term();
-        if (this.match(TokenType.EQUAL)){
+        return this.e2();
+    }
+    e0() {
+        const left = this.e1();
+        if (this.match(TokenType.IMPL)) {
             const connective = this.previous();
-            const right = this.term();
-            return new FormulaEquality(term,connective,right);
+            const right = this.e1(); 
+            return new FormulaImpl(left, connective, right);
+        } else if (this.match(TokenType.BI_IMPL)) {
+            const connective = this.previous();
+            const right = this.e1(); 
+            return new FormulaBiImpl(left, connective, right);
         }
-
-        // variable first is a hack to accommodate for the lax syntax used in tutorials:
-        // for AND and OR on the first level of the formula, parenthesis can be omitted
-        if (first === true) {
-            if (this.match(TokenType.AND)) {
-                const formulas = [];
-                const connectives = [];
-                formulas.push(term);
-                connectives.push(this.previous());
-                formulas.push(this.formula(false));
-                while (this.match(TokenType.AND)){
-                    connectives.push(this.previous());
-                    formulas.push(this.formula(false));
-                }
-                return new FormulaAnd(formulas,connectives);
-            }
-            if (this.match(TokenType.OR)) {
-                const formulas = [];
-                const connectives = [];
-                formulas.push(term);
-                connectives.push(this.previous());
-                formulas.push(this.formula(false));
-                while (this.match(TokenType.OR)){
-                    connectives.push(this.previous());
-                    formulas.push(this.formula(false));
-                }
-                return new FormulaOr(formulas, connectives);
-            }
-        }
-        return term;
-    }//formula
+        return left;
+    }
 
     term(){
         if(this.match(TokenType.TRUE, TokenType.FALSE, TokenType.NUMBER)){
@@ -714,7 +685,7 @@ class RuleNegationElim extends Rule{
             return false;
         }
         //FIXME check for smaller line no and scope
-        console.log(String(formula),String(this.source.right.right))
+        //console.log(String(formula),String(this.source.right.right))
         if (String(formula) === String(this.source.right.right))
             return true;
         
@@ -825,6 +796,71 @@ class RuleBottomIntro extends Rule{
     }
 }
 
+class RuleImplicationElim extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources;
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Exactly two premises are needed as source');
+            return false;
+        }
+        if (!(formula instanceof Formula)) {
+            console.error('Expected formula to validate to be of type Formula');
+            return false;
+        }
+
+        let formulaImpl = null;
+        let formulaAntecedent = null;
+        this.sources.forEach(sourceForm => {
+            if (sourceForm instanceof FormulaImpl) {
+                if(formulaImpl === null)
+                    formulaImpl = sourceForm;
+                else {
+                    // we got 2 implication formulae
+                    // check if which is which
+                    if (String(sourceForm) === String(formulaImpl.left)) {
+                        formulaAntecedent = sourceForm;
+                    } else if (String(sourceForm.left) === String(formulaImpl)) {
+                        [formulaImpl,formulaAntecedent] = [sourceForm, formulaImpl];
+                    } else {
+                        formulaAntecedent = sourceForm;
+                    }
+                }
+            } else if (sourceForm instanceof Formula) {
+                formulaAntecedent = sourceForm;
+            } else {
+                console.error('No valid formula given as source');
+                return false;
+            }
+            if (sourceForm.line > formula.line){
+                console.error('Source formula must occur before current formula')
+                return false;
+            }
+        });
+        if (formulaImpl === null) {
+            console.error('Expected one Implication as source');
+            return false;
+        }
+        if (formulaAntecedent === null) {
+            console.error('Expected one Antecedent as source');
+            return false;
+        }
+
+        if (String(formulaAntecedent) !== String(formulaImpl.left)) {
+            console.error('Expected Antecedent to be present in Implication');
+            return false;
+        }
+        if (String(formula) !== String(formulaImpl.right)) {
+            console.error('Expected Consequent of Implication to match given formula');
+            return false;
+        }
+
+        return true;
+    }
+}
+
 let gLineNo = 0;
 function parseLine(text){
     return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
@@ -855,9 +891,16 @@ const l13 = '⊥'
 const l14 = 'Lulu(a,b,c)'
 const l15 = '¬Peter'
 const l16 = '⊥'
+const l17 = 'today → tomorrow'
+const l18 = 'today '
+const l19 = 'tomorrow '
+const l20 = '(today → tomorrow) → dayaftertomorrow '
+const l21 = 'dayaftertomorrow '
+
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
 //console.log(1 + tokens[0])
+
 const line1 = parseLine(l1)
 const line2 = parseLine(l2)
 const line3 = parseLine(l3)
@@ -874,22 +917,29 @@ const line13 = parseLine(l13)
 const line14 = parseLine(l14)
 const line15 = parseLine(l15)
 const line16 = parseLine(l16)
+const line17 = parseLine(l17)
+const line18 = parseLine(l18)
+const line19 = parseLine(l19)
+const line20 = parseLine(l20)
+const line21 = parseLine(l21)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
-console.log( justifyLine(line6, new RuleAndElim(line4) ))
-//console.log( line5)
-console.log( String(line5))
+console.log( !justifyLine(line6, new RuleAndElim(line4) ))
 console.log( justifyLine(line8, new RuleAndIntro(line6,line7) ))
-
 console.log(line8.isValid)
-
 console.log( justifyLine(line10, new RuleNegationElim(line9)))
 console.log( justifyLine(line11, new RuleOrIntro(line10)))
 console.log( justifyLine(line12, new RuleOrIntro(line8)))
 console.log( justifyLine(line14, new RuleBottomElim(line13)))
 console.log( justifyLine(line16, new RuleBottomIntro(line15,line10)))
 console.log( justifyLine(line16, new RuleBottomIntro(line15,line9)))
+console.log( justifyLine(line19, new RuleImplicationElim(line18,line17)))
+console.log( justifyLine(line21, new RuleImplicationElim(line17,line20)))
+
+
+
+
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
 //const andElim = new AndElim(1,2)
 //form.addRule(andElim)
