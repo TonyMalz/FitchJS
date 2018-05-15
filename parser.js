@@ -154,7 +154,7 @@ class Scanner {
                 this.addToken(TokenType.BI_IMPL);
                 break;
             case '=' :
-                this.addToken(match('>') ? TokenType.IMPL : TokenType.EQUAL);
+                this.addToken(this.match('>') ? TokenType.IMPL : TokenType.EQUAL);
                 break;
             case '<' :
                 if (this.match('=')) {
@@ -335,7 +335,6 @@ class Parser {
 
     parse(){
         try {
-            //const form = this.formula(true);
             const form = this.e0();
             this.checkIsAtEOF();
             return form;
@@ -358,7 +357,13 @@ class Parser {
             this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
             return left;
         }
-        return this.term();
+        const term = this.term();
+        if (this.match(TokenType.EQUAL)){
+            const connective = this.previous();
+            const right = this.term();
+            return new FormulaEquality(term,connective,right);
+        }
+        return term;
     }
     e4(){
         if (this.match(TokenType.NOT)) {
@@ -819,7 +824,7 @@ class RuleImplicationElim extends Rule{
                     formulaImpl = sourceForm;
                 else {
                     // we got 2 implication formulae
-                    // check if which is which
+                    // check which is which
                     if (String(sourceForm) === String(formulaImpl.left)) {
                         formulaAntecedent = sourceForm;
                     } else if (String(sourceForm.left) === String(formulaImpl)) {
@@ -861,6 +866,105 @@ class RuleImplicationElim extends Rule{
     }
 }
 
+class RuleBiImplicationElim extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources;
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Exactly two premises are needed as source');
+            return false;
+        }
+        if (!(formula instanceof Formula)) {
+            console.error('Expected formula to validate to be of type Formula');
+            return false;
+        }
+
+        this.sources.forEach(sourceForm => {
+            if (!(sourceForm instanceof Formula)) {
+                console.error('Expected source to be of type Formula');
+                return false;
+            }
+            if (sourceForm.line > formula.line){
+                console.error('Source formula must occur before current formula')
+                return false;
+            }
+        });
+
+        const [source1,source2] = this.sources;
+        if (source1 instanceof FormulaBiImpl) {
+            if (String(source1.left) === String(formula) && String(source1.right) === String(source2)) {
+                return true;
+            }
+            if (String(source1.right) === String(formula) && String(source1.left) === String(source2)) {
+                return true;
+            }
+        }
+        if (source2 instanceof FormulaBiImpl) {
+            if (String(source2.left) === String(formula) && String(source2.right) === String(source1)) {
+                return true;
+            }
+            if (String(source2.right) === String(formula) && String(source2.left) === String(source1)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+class RuleReiteration extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof Formula)) {
+            console.error('Expected source to be of type Formula');
+            return false;
+        }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+        if (String(formula) !== String(this.source)) {
+            console.error('Expected source formula to match current formula');
+            return false;
+        }
+        return true;
+    }
+}
+
+class RuleIdentityElim extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources;
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Exactly two premises are needed as source');
+            return false;
+        }
+        if (!(formula instanceof Formula)) {
+            console.error('Expected formula to validate to be of type Formula');
+            return false;
+        }
+
+        this.sources.forEach(sourceForm => {
+            if (!(sourceForm instanceof Formula)) {
+                console.error('Expected source to be of type Formula');
+                return false;
+            }
+            if (sourceForm.line > formula.line){
+                console.error('Source formula must occur before current formula')
+                return false;
+            }
+        });
+        // XXX TODO
+    }
+}
+
 let gLineNo = 0;
 function parseLine(text){
     return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
@@ -896,6 +1000,14 @@ const l18 = 'today '
 const l19 = 'tomorrow '
 const l20 = '(today → tomorrow) → dayaftertomorrow '
 const l21 = 'dayaftertomorrow '
+const l22 = '(bubu) ↔ cat '
+const l23 = 'cat'
+const l24 = 'bubu'
+const l25 = 'Lulu(a,b,c)'
+const l26 = 'Lulu(a,b,c)'
+const l27 = 'Lulu(a,b,c) = cat'
+const l28 = 'Parse(cat,cat)'
+const l29 = 'Parse(Lulu(a,b,c),cat)'
 
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
@@ -922,6 +1034,14 @@ const line18 = parseLine(l18)
 const line19 = parseLine(l19)
 const line20 = parseLine(l20)
 const line21 = parseLine(l21)
+const line22 = parseLine(l22)
+const line23 = parseLine(l23)
+const line24 = parseLine(l24)
+const line25 = parseLine(l25)
+const line26 = parseLine(l26)
+const line27 = parseLine(l27)
+const line28 = parseLine(l28)
+const line29 = parseLine(l29)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
@@ -936,6 +1056,8 @@ console.log( justifyLine(line16, new RuleBottomIntro(line15,line10)))
 console.log( justifyLine(line16, new RuleBottomIntro(line15,line9)))
 console.log( justifyLine(line19, new RuleImplicationElim(line18,line17)))
 console.log( justifyLine(line21, new RuleImplicationElim(line17,line20)))
+console.log( justifyLine(line24, new RuleBiImplicationElim(line22,line23)))
+console.log( justifyLine(line26, new RuleReiteration(line25)))
 
 
 
