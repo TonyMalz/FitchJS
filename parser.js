@@ -491,6 +491,9 @@ class Formula {
     setRule(rule) {
         this.rule = rule;
     }
+    *[Symbol.iterator](){
+        yield null;
+    }
 }
 
 class FormulaUnary extends Formula {
@@ -503,6 +506,14 @@ class FormulaUnary extends Formula {
     toString(){
         return this.operator + this.right;
     }
+    *[Symbol.iterator](){
+        yield this.right;
+        for (const term of this.right){
+            if (term !== null)
+                yield term;
+        }
+    }
+
 }
 class FormulaNot extends FormulaUnary {
 }
@@ -516,6 +527,18 @@ class FormulaBinary extends Formula {
     }
     toString(){
         return '( ' + this.left + ' ' + this.connective + ' ' + this.right + ' )';
+    }
+    *[Symbol.iterator](){
+        yield this.left;
+        for (const term of this.left){
+            if (term !== null)
+                yield term;
+        }
+        yield this.right;
+        for (const term of this.right){
+            if (term !== null)
+                yield term;
+        }
     }
 }
 class FormulaImpl extends FormulaBinary {
@@ -534,6 +557,13 @@ class FormulaQuantified extends Formula {
     }
     toString(){
         return this.quantifier + this.variable + this.right;
+    }
+    *[Symbol.iterator](){
+        yield this.right;
+        for (const term of this.right){
+            if (term !== null)
+                yield term;
+        }
     }
 }
 class FormulaAnd extends Formula {
@@ -559,6 +589,15 @@ class FormulaAnd extends Formula {
     toString(){
         return '( ' + this.terms.join(' ∧ ') + ' )';
     }
+    *[Symbol.iterator](){
+        for (const term of this.terms){
+            yield term;
+            for (const t of term) {
+                if (t !== null)
+                    yield t;
+            }
+        }
+    }
 }
 class FormulaOr extends Formula {
     constructor(terms, connectives ) {
@@ -569,6 +608,15 @@ class FormulaOr extends Formula {
     }
     toString(){
         return '( ' + this.terms.join(' ∨ ') + ' )';
+    }
+    *[Symbol.iterator](){
+        for (const term of this.terms){
+            yield term;
+            for (const t of term) {
+                if (t !== null)
+                    yield t;
+            }
+        }
     }
 }
 
@@ -588,6 +636,7 @@ class Term extends Formula {
         }
         return str;
     }
+
 }
 class TermVariable extends Term {  
 }
@@ -598,6 +647,15 @@ class TermFunction extends Term {
         super(name);
         this.args = args; //Array Formula
         this.line = name.line;
+    }
+    *[Symbol.iterator](){
+        for (const term of this.args){
+            yield term;
+            for (const t of term) {
+                if (t !== null)
+                    yield t;
+            }
+        }
     }
 }
 
@@ -961,7 +1019,57 @@ class RuleIdentityElim extends Rule{
                 return false;
             }
         });
-        // XXX TODO
+        
+        let equality = null;
+        let substitutionFormula = null;
+        this.sources.forEach(sourceForm => {
+            if (equality === null && (sourceForm instanceof FormulaEquality)) {
+                equality = sourceForm;
+            } else {
+                substitutionFormula = sourceForm;
+            }
+        });
+
+        if (equality === null){
+            console.error('Expected one FormulaEquality in sources');
+            return false;
+        }
+
+        if( String(formula) === String(substitutionFormula))
+            return true;
+
+        let skipCheck = 0;
+        const subIterator = substitutionFormula[Symbol.iterator]();
+        for (const term of formula) {
+            if (skipCheck > 0) {
+                --skipCheck;
+                continue;
+            }
+            const substitutionTerm = subIterator.next().value;
+            if(String(term) === String(substitutionTerm))
+                continue;
+            if(String(term) === String(equality.left) && String(substitutionTerm) === String(equality.right) ){
+                console.log(String(term),' => ', String(equality.right))
+                const sterms = [...term];
+                if (sterms != ''){ // because [null] is cast to '' (empty string)
+                    skipCheck = sterms.length;
+                }
+                continue;
+            }
+            if(String(term) === String(equality.right) && String(substitutionTerm) === String(equality.left) ){
+                console.log(String(term),' <= ', String(equality.left))
+                const sterms = [...term];
+                if (sterms != ''){// because [null] is cast to '' (empty string)
+                    skipCheck = sterms.length;
+                }
+                continue;
+            }
+            console.error(String(term),' != ',String(substitutionTerm))
+            return false;
+        }
+        
+        return true;
+
     }
 }
 
@@ -1006,8 +1114,11 @@ const l24 = 'bubu'
 const l25 = 'Lulu(a,b,c)'
 const l26 = 'Lulu(a,b,c)'
 const l27 = 'Lulu(a,b,c) = cat'
-const l28 = 'Parse(cat,cat)'
-const l29 = 'Parse(Lulu(a,b,c),cat)'
+const l28 = 'Parse(cat,Lulu(a,b,c))'
+const l29 = 'Parse(cat,cat)'
+const l30 = 'b = b'
+const l31 = 'b = a'
+const l32 = 'a=b'
 
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
@@ -1042,6 +1153,9 @@ const line26 = parseLine(l26)
 const line27 = parseLine(l27)
 const line28 = parseLine(l28)
 const line29 = parseLine(l29)
+const line30 = parseLine(l30)
+const line31 = parseLine(l31)
+const line32 = parseLine(l32)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
@@ -1058,6 +1172,8 @@ console.log( justifyLine(line19, new RuleImplicationElim(line18,line17)))
 console.log( justifyLine(line21, new RuleImplicationElim(line17,line20)))
 console.log( justifyLine(line24, new RuleBiImplicationElim(line22,line23)))
 console.log( justifyLine(line26, new RuleReiteration(line25)))
+console.log( justifyLine(line29, new RuleIdentityElim(line28,line27)))
+console.log( justifyLine(line32, new RuleIdentityElim(line31,line30)))
 
 
 
