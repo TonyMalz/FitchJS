@@ -15,7 +15,7 @@ const TokenType = Object.freeze({
 });
 
 class Token {
-    constructor(type, lexeme, literal, line, pos){
+    constructor(type, lexeme, literal, line=-1, pos=-1){
         this.type = type;
         this.lexeme = lexeme;
         this.literal = literal;
@@ -494,6 +494,7 @@ class Formula {
     *[Symbol.iterator](){
         yield null;
     }
+    replaceVariable(oldVar,newVar){}
 }
 
 class FormulaUnary extends Formula {
@@ -512,6 +513,9 @@ class FormulaUnary extends Formula {
             if (term !== null)
                 yield term;
         }
+    }
+    replaceVariableName(oldName,newName){
+        this.right.replaceVariableName(oldName,newName);
     }
 
 }
@@ -540,6 +544,10 @@ class FormulaBinary extends Formula {
                 yield term;
         }
     }
+    replaceVariableName(oldName,newName){
+        this.left.replaceVariableName(oldName,newName);
+        this.right.replaceVariableName(oldName,newName);
+    }
 }
 class FormulaImpl extends FormulaBinary {
 }
@@ -564,6 +572,13 @@ class FormulaQuantified extends Formula {
             if (term !== null)
                 yield term;
         }
+    }
+    bind(variable){
+        this.right.replaceVariableName(String(this.variable),String(variable));
+        return this.right;
+    }
+    replaceVariableName(oldName,newName){
+        this.right.replaceVariableName(oldName,newName);
     }
 }
 class FormulaAnd extends Formula {
@@ -598,6 +613,9 @@ class FormulaAnd extends Formula {
             }
         }
     }
+    replaceVariableName(oldName,newName){
+        this.terms.forEach(term => term.replaceVariableName(oldName,newName));
+    }
 }
 class FormulaOr extends Formula {
     constructor(terms, connectives ) {
@@ -617,6 +635,9 @@ class FormulaOr extends Formula {
                     yield t;
             }
         }
+    }
+    replaceVariableName(oldName,newName){
+        this.terms.forEach(term => term.replaceVariableName(oldName,newName));
     }
 }
 
@@ -654,6 +675,14 @@ class TermFunction extends Term {
             for (const t of term) {
                 if (t !== null)
                     yield t;
+            }
+        }
+    }
+    replaceVariableName(oldName,newName){
+
+        for (const i in this.args) {
+            if ((this.args[i] instanceof TermVariable) && String(this.args[i]) === oldName) {
+                this.args[i].name.lexeme = newName;
             }
         }
     }
@@ -1067,11 +1096,99 @@ class RuleIdentityElim extends Rule{
             console.error(String(term),' != ',String(substitutionTerm))
             return false;
         }
-        
         return true;
-
     }
 }
+
+class RuleUniversalElim extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(this.source instanceof FormulaQuantified)) {
+            console.error('source must be a universal quantified formula');
+            return false;
+        }
+        if (this.source.quantifier.type !== TokenType.FOR_ALL ) {
+            console.error('source must be a universal quantified formula');
+            return false;
+        }
+        if (!(formula instanceof Formula)) {
+            console.error('Expected a formula');
+            return false;
+        }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+
+        const it = formula[Symbol.iterator]();
+        let diffTerm = null;
+        for (const sourceTerm of this.source.right){
+            const term = it.next().value;
+            if (! (term instanceof TermVariable))
+                continue;
+            if (String(term) !== String(sourceTerm)){
+                //TODO obj ref?
+                diffTerm = term;
+                break;
+            }
+        }
+
+        if (String(this.source.bind(diffTerm)) === String(formula))
+            return true;
+
+        console.error(`Variable ${diffTerm} is not a valid substituition for ${this.source.variable} in this context`);
+        return false;
+    }
+}
+
+class RuleExistentialIntro extends Rule{
+    constructor(source){
+        super();
+        this.source = source;
+    }
+    validate(formula) {
+        if (!(formula instanceof FormulaQuantified)) {
+            console.error('source must be a universal quantified formula');
+            return false;
+        }
+        if (formula.quantifier.type !== TokenType.EXISTS) {
+            console.error('source must be an existential quantified formula');
+            return false;
+        }
+        if (!(this.source instanceof Formula)) {
+            console.error('Expected source to be of formula');
+            return false;
+        }
+        if(this.source.line > formula.line) {
+            console.error('Source formula must occur before current formula')
+            return false;
+        }
+
+        const it = this.source[Symbol.iterator]();
+        let oldVar = null;
+        let newVar = null;
+        for (const term of formula.right){
+            const sourceTerm = it.next().value;
+            if (! (term instanceof TermVariable))
+                continue;
+            if (String(term) !== String(sourceTerm)){
+                newVar = String(term);
+                oldVar = String(sourceTerm);
+                break;
+            }
+        }
+        this.source.replaceVariableName(oldVar,newVar);
+        if (String(this.source) === String(formula.right))
+            return true;
+        
+        console.error(`Existential for ${formula.variable} can not be concluded in this context`);
+        return false;
+    }
+}
+
 
 let gLineNo = 0;
 function parseLine(text){
@@ -1119,6 +1236,10 @@ const l29 = 'Parse(cat,cat)'
 const l30 = 'b = b'
 const l31 = 'b = a'
 const l32 = 'a=b'
+const l33 = '∀x∀t(Zuhause(x, t) → ¬AmTatort(x, t))'
+const l34 = '∀t(Zuhause(Peter, t) → ¬AmTatort(Peter,t))'
+const l35 = 'Tet(a) ∧ W(b, a)'
+const l36 = '∃x(Tet(x) ∧ W(b,x))'
 
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
@@ -1156,6 +1277,10 @@ const line29 = parseLine(l29)
 const line30 = parseLine(l30)
 const line31 = parseLine(l31)
 const line32 = parseLine(l32)
+const line33 = parseLine(l33)
+const line34 = parseLine(l34)
+const line35 = parseLine(l35)
+const line36 = parseLine(l36)
 
 console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
@@ -1174,8 +1299,8 @@ console.log( justifyLine(line24, new RuleBiImplicationElim(line22,line23)))
 console.log( justifyLine(line26, new RuleReiteration(line25)))
 console.log( justifyLine(line29, new RuleIdentityElim(line28,line27)))
 console.log( justifyLine(line32, new RuleIdentityElim(line31,line30)))
-
-
+console.log( justifyLine(line34, new RuleUniversalElim(line33)))
+console.log( justifyLine(line36, new RuleExistentialIntro(line35)))
 
 
 //const line3  = new Parser(new Scanner(l3,3).scanTokens()).parse();
