@@ -659,7 +659,12 @@ class Term extends Formula {
     }
 
 }
-class TermVariable extends Term {  
+class TermVariable extends Term {
+    replaceVariableName(oldName,newName){
+        if (this.name.lexeme === oldName) {
+            this.name.lexeme = newName;
+        }
+    }  
 }
 class TermConstant extends Term {
 }
@@ -679,12 +684,7 @@ class TermFunction extends Term {
         }
     }
     replaceVariableName(oldName,newName){
-
-        for (const i in this.args) {
-            if ((this.args[i] instanceof TermVariable) && String(this.args[i]) === oldName) {
-                this.args[i].name.lexeme = newName;
-            }
-        }
+        this.args.forEach(term => term.replaceVariableName(oldName,newName));
     }
 }
 
@@ -1238,8 +1238,8 @@ const l31 = 'b = a'
 const l32 = 'a=b'
 const l33 = '∀x∀t(Zuhause(x, t) → ¬AmTatort(x, t))'
 const l34 = '∀t(Zuhause(Peter, t) → ¬AmTatort(Peter,t))'
-const l35 = 'Tet(a) ∧ W(b, a)'
-const l36 = '∃x(Tet(x) ∧ W(b,x))'
+const l35 = 'Tet(a) ∧ W(b, S(a)) ∧ a = a'
+const l36 = '∃x(Tet(x) ∧ W(b,S(x)) ∧ x = x)'
 
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)
