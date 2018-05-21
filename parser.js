@@ -109,7 +109,7 @@ class Scanner {
                 this.addToken(TokenType.COMMA);
                 break;
             case '-' :
-                this.addToken(match('>') ? TokenType.IMPL : TokenType.MINUS);
+                this.addToken(this.match('>') ? TokenType.IMPL : TokenType.MINUS);
                 break;
             case '+' :
                 this.addToken(TokenType.PLUS);
@@ -476,13 +476,13 @@ class ParseError extends Error {
 class Formula {
     constructor(){
         this.isPremise = false;
-        this.isConclusion = false;
-        this.isValid = false;
+        this.isGoal = false;
+        this.isJustified = false;
         this.rule = null;
         this.line = 0;
     }
-    checkRule(){
-        if (! this.rule instanceof Rule){
+    check(){
+        if (! (this.rule instanceof Rule)) {
             console.error('no rule given');
             return false;
         }
@@ -692,6 +692,17 @@ class Rule {
     validate(formula){
         console.error('validate rule not implemented')
         return false;
+    }
+    toString(){
+        let str = this.constructor.name;
+            str += '('
+        if (this.sources){
+            str += this.sources.map(({line}) => line).join(',')
+        } else if (this.source) {
+            str += this.source.line;
+        }
+        str += ')'
+        return str;
     }
 }
 class RuleAndElim extends Rule{
@@ -1189,6 +1200,150 @@ class RuleExistentialIntro extends Rule{
     }
 }
 
+class RuleImplicationIntro extends Rule{
+    constructor(source){
+        super();
+        this.source = source; // subproof
+    }
+    validate(formula) {
+        if (! (this.source instanceof Proof)) {
+            console.error('Expected subproof for RuleImplicationIntro as source')
+            return false;
+        }
+        if (! (formula instanceof FormulaImpl)) {
+            console.error('Expected formula of type Implication')
+            return false;
+        }
+
+        const antecedent = String(formula.left);
+        const consequent = String(formula.right);
+        let foundAntecedent = false;
+        let foundConsequent = false;
+        for (const premise of this.source.getPremises()){
+            if(String(premise) === antecedent)
+                foundAntecedent = true;
+        }
+        for (const term of this.source.getSteps()){
+            if(String(term) === consequent)
+                foundConsequent = true;
+        }
+        if (!foundAntecedent) {
+            console.error('Antecedent missing in (detached) premise of subproof')
+            return false
+        }
+        if (!foundConsequent) {
+            console.error('Consequent not found in subproof')
+            return false
+        }
+        return true;
+    }
+}
+
+
+
+
+class Proof {
+    constructor(goal=null){
+        this.parent = null;
+        this.goal = null;
+        this.steps = [];
+        this.variables = new Map();
+        this.stepNo = 0;
+        this.line = 0;
+        if (goal !== null)
+            this.setGoal(goal);
+    }
+    addPremise(premise){
+        const formula = parseLine(premise);
+        formula.isPremise = true;
+        this.addFormula(formula);
+    }
+    getPremises(){
+        return this.steps.filter(f => f.isPremise);
+    }
+    addFormula(formula, rule=null){
+        if (!(formula instanceof Formula)){
+            formula = parseLine(formula);
+        }
+        if (rule instanceof Rule)
+            formula.setRule(rule);
+        this.steps[++this.stepNo] = formula;
+    }
+    Step(lineNo){
+        return this.steps[lineNo];
+    }
+    getSteps(){
+        return this.steps.filter(f => !f.isPremise);
+    }
+    removeStep(lineNo){
+        this.steps.splice(lineNo,1)
+    }
+    setRuleForStep(lineNo, rule){}
+    
+    addSubProof(subProof){
+        if (!(subProof instanceof Proof)) {
+            console.error('Expected subproof');
+            return;
+        }
+        subProof.parent = this;
+        subProof.line = ++this.stepNo
+        this.steps[this.stepNo] = subProof;
+    }
+
+    setGoal(goal){
+        this.goal = new Parser(new Scanner(goal).scanTokens()).parse();
+    }
+
+    checkStep(lineNo){}
+    check(){
+        // XXX FIXME
+        if (!this.parent) {
+            this.steps.forEach(p => {
+                if (p.rule)
+                    console.log(p.line,String(p),String(p.rule))
+                else if (p instanceof Proof) {
+                    String(p)
+                }
+                else {
+                    console.log(p.line,String(p))
+                }
+            });
+        }
+        
+        let isValid = true;
+        this.steps.filter(s => !s.isPremise).forEach(step => {
+            
+            const result = step.check();
+            if (result === true){
+                step.isJustified = true;
+            } else {
+                isValid = false;
+                console.log(`Step ${step.line} is not valid`)
+            }
+        });
+        if (this.parent)
+            console.log('SubProof is valid: ', isValid)
+        else
+            console.log('Proof is valid: ', isValid)
+        return isValid;
+    }
+    toString(){
+        // XXX FIXME
+        this.steps.forEach(p => {
+            if (p.rule)
+                console.log('--  ',p.line,'|',String(p),String(p.rule))
+            else if (p instanceof Proof) {
+                String(p)
+            }
+            else {
+                console.log('--  ',p.line,'|',String(p))
+            }
+
+        })
+        return 'subProof'
+    }
+}
+
 
 let gLineNo = 0;
 function parseLine(text){
@@ -1197,13 +1352,47 @@ function parseLine(text){
 
 function justifyLine(line,rule){
     line.setRule(rule);
-    const result = line.checkRule();
+    const result = line.check();
     if (result === true){
-        line.isValid = true;
+        line.isJustified = true;
     }
     return result;
 }
 
+// -- test
+
+const p = new Proof()
+p.addPremise('A')
+p.addPremise('B')
+p.addPremise('(A ∧ B) -> C')
+p.addFormula('A ∧ B', new RuleAndIntro(p.Step(1),p.Step(2)))
+p.addFormula('C', new RuleImplicationElim(p.Step(4),p.Step(3)))
+const sP = new Proof()
+      sP.addPremise('A')
+      sP.addFormula('C', new RuleReiteration(p.Step(5)))
+p.addSubProof(sP);
+p.addFormula('A -> C', new RuleImplicationIntro(sP))
+
+p.check()
+
+//testParser()
+
+//......
+// proof('A -> C')
+// prem('A')
+// prem('B')
+// prem('(A ∧ B) -> C')
+// step('A ∧ B', AndIntro(1,2))
+// step('C', ImplicationElim(3,4))
+// subproof('A')
+//     step('C', Reiteration(5))
+// endproof()
+// step('A -> C', ImplicationElim(6))
+
+// checkProof()
+
+
+function testParser(){
 const l1 = '∀x ∀t (Zuhause(x, t) → ¬AmTatort(x, t))'
 const l2 = '(Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c)))'
 const l3 = 'Tet(a) ∧ Tet(b) ∧ Tet(c) ∧ (Small(a) ∨ Small(b) ∨ Small(c))'
@@ -1286,7 +1475,7 @@ console.log( justifyLine(line6, new RuleAndElim(line3) ))
 console.log( justifyLine(line6, new RuleAndElim(line2) ))
 console.log( !justifyLine(line6, new RuleAndElim(line4) ))
 console.log( justifyLine(line8, new RuleAndIntro(line6,line7) ))
-console.log(line8.isValid)
+console.log(line8.isJustified)
 console.log( justifyLine(line10, new RuleNegationElim(line9)))
 console.log( justifyLine(line11, new RuleOrIntro(line10)))
 console.log( justifyLine(line12, new RuleOrIntro(line8)))
@@ -1316,3 +1505,4 @@ console.log( justifyLine(line36, new RuleExistentialIntro(line35)))
 //console.log(new Token(TokenType.LESS_EQUAL,'<=').lexeme)
 
 //new Scanner('').keywords.forEach((k,v)=>console.log(k,v))
+}
