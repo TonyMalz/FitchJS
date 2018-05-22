@@ -1381,6 +1381,8 @@ class RuleOrElim extends Rule{
             return false;
         }
 
+        // XXX FIXME: check lines and subproof level
+
         let countValidsubProofs = 0;
         for ( const term of formOr.terms) {
             for (const proof of subProofs) {
@@ -1409,6 +1411,61 @@ class RuleOrElim extends Rule{
 
         return true;
 
+    }
+}
+
+class RuleUniversalIntro extends Rule{
+    constructor(source){
+        super();
+        this.source = source; // subproof
+    }
+    validate(formula) {
+        if (! (this.source instanceof Proof)) {
+            console.error('Expected subproof for RuleUniversalIntro as source')
+            return false;
+        }
+        if (! (formula instanceof FormulaQuantified)) {
+            console.error('Expected formula of type Negation')
+            return false;
+        }
+        if (formula.quantifier.type !== TokenType.FOR_ALL ) {
+            console.error('Expected universal quantified formula')
+            return false;
+        }
+
+        // check P(t,a,t) -> P(x,a,x)
+        const lastTerm = this.source.getSteps()[this.source.getSteps().length - 1];
+        const it = lastTerm[Symbol.iterator]();
+        let oldVar = null;
+        let newVar = null;
+        for (const term of formula.right){
+            const sourceTerm = it.next().value;
+            if (! (term instanceof TermVariable))
+                continue;
+            if (String(term) !== String(sourceTerm)){
+                newVar = String(term);
+                oldVar = String(sourceTerm);
+                break;
+            }
+        }
+
+        const premise = this.source.getPremises()[this.source.getPremises().length - 1];
+        if (!(premise instanceof TermVariable)) {
+            console.error('No variable given for subproof');
+            return false;
+        }
+        // FIXME check var in current and all other parent proofs
+        if (oldVar !== String(premise)){
+            console.error(`Free variable '${premise}' does not match with deduction rule`);
+            return false;
+        }
+
+        lastTerm.replaceVariableName(oldVar,newVar);
+        if (String(lastTerm) === String(formula.right))
+            return true;
+        
+        console.error(`universal for ${formula.variable} can not be concluded in this context`);
+        return false;
     }
 }
 
@@ -1594,6 +1651,20 @@ let sP3 = new Proof()
 p.addSubProof(sP3)
 p.addFormula('Peter', new RuleOrElim(sP1,sP2,sP3,p.Step(1)))
 
+p.check()
+
+
+gLineNo = 0;
+p = new Proof()
+p.addPremise('∀x(P(x, t) → A(x, t))')
+p.addPremise('∀x(P(x, t))')
+sP = new Proof()
+      sP.addPremise('c')
+      sP.addFormula('P(c,t) -> A(c,t) ', new RuleUniversalElim(p.Step(1)))
+      sP.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
+      sP.addFormula('A(c,t)', new RuleImplicationElim(sP.Step(2),sP.Step(3)))
+p.addSubProof(sP)
+p.addFormula('∀x(A(x, t))', new RuleUniversalIntro(sP))
 p.check()
 
 //testParser()
