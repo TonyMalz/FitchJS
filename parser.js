@@ -1239,7 +1239,112 @@ class RuleImplicationIntro extends Rule{
     }
 }
 
+class RuleBiImplicationIntro extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources; // subproof
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Exactly two subproofs are expected as source');
+            return false;
+        }
 
+        if (! (formula instanceof FormulaBiImpl)) {
+            console.error('Expected formula of type BiImplication')
+            return false;
+        }
+
+        const antecedent1 = String(formula.left);
+        const consequent1 = String(formula.right);
+        const antecedent2 = consequent1;
+        const consequent2 = antecedent1;
+
+        let foundAntecedent1 = false;
+        let foundConsequent1 = false;
+        let foundAntecedent2 = false;
+        let foundConsequent2 = false;
+
+        for (const source of this.sources) {
+            if (! (source instanceof Proof)) {
+                console.error('Expected subproof for RuleBiImplicationIntro as source')
+                return false;
+            }
+            for (const premise of source.getPremises()){
+                if (String(premise) === antecedent1) {
+                    for (const term of source.getSteps()){
+                        if (String(term) === consequent1)
+                            foundConsequent1 = true;
+                    }
+                    foundAntecedent1 = true;
+                } else if (String(premise) === antecedent2) {
+                    for (const term of source.getSteps()){
+                        if (String(term) === consequent2)
+                            foundConsequent2 = true;
+                    }
+                    foundAntecedent2 = true;
+                }
+            }
+        }
+
+        if (!foundAntecedent1) {
+            console.error(`Antecedent ${antecedent1} missing in (detached) premise of any given subproof`)
+            return false
+        }
+        if (!foundConsequent1) {
+            console.error(`Consequent ${consequent1} not found in any given subproof`)
+            return false
+        }
+        if (!foundAntecedent2) {
+            console.error(`Antecedent ${antecedent2} missing in (detached) premise of any given subproof`)
+            return false
+        }
+        if (!foundConsequent2) {
+            console.error(`Consequent ${consequent2} not found in any given subproof`)
+            return false
+        }
+        
+        return true;
+    }
+}
+
+class RuleNegationIntro extends Rule{
+    constructor(source){
+        super();
+        this.source = source; // subproof
+    }
+    validate(formula) {
+        if (! (this.source instanceof Proof)) {
+            console.error('Expected subproof for RuleNegationIntro as source')
+            return false;
+        }
+        if (! (formula instanceof FormulaNot)) {
+            console.error('Expected formula of type Negation')
+            return false;
+        }
+
+        const rightTerm = String(formula.right);
+        let foundRightTerm = false;
+        let foundBottom = false;
+        for (const premise of this.source.getPremises()){
+            if(String(premise) === rightTerm)
+                foundRightTerm = true;
+        }
+        for (const term of this.source.getSteps()){
+            if((term instanceof Term) && term.name.type === TokenType.FALSE)
+                foundBottom = true;
+        }
+        if (!foundRightTerm) {
+            console.error('Negated Term missing in (detached) premise of subproof')
+            return false
+        }
+        if (!foundBottom) {
+            console.error('Bottom not found in subproof')
+            return false
+        }
+        return true;
+    }
+}
 
 
 class Proof {
@@ -1360,18 +1465,46 @@ function justifyLine(line,rule){
 }
 
 // -- test
+// TODO: step, line or premise for rule reference??
 
-const p = new Proof()
+let p = new Proof()
 p.addPremise('A')
 p.addPremise('B')
 p.addPremise('(A ∧ B) -> C')
 p.addFormula('A ∧ B', new RuleAndIntro(p.Step(1),p.Step(2)))
 p.addFormula('C', new RuleImplicationElim(p.Step(4),p.Step(3)))
-const sP = new Proof()
+let sP = new Proof()
       sP.addPremise('A')
       sP.addFormula('C', new RuleReiteration(p.Step(5)))
-p.addSubProof(sP);
+p.addSubProof(sP)
 p.addFormula('A -> C', new RuleImplicationIntro(sP))
+
+p.check()
+
+gLineNo = 0;
+p = new Proof()
+p.addPremise('¬A')
+sP = new Proof()
+      sP.addPremise('A')
+      sP.addFormula('⊥', new RuleBottomIntro(p.Step(1),sP.Step(1)))
+p.addSubProof(sP)
+p.addFormula('¬A', new RuleNegationIntro(sP))
+
+p.check()
+
+gLineNo = 0;
+p = new Proof()
+p.addPremise('A')
+p.addPremise('B')
+let sP1 = new Proof()
+      sP1.addPremise('A')
+      sP1.addFormula('B', new RuleReiteration(p.Step(2)))
+p.addSubProof(sP1)
+let sP2 = new Proof()
+      sP2.addPremise('B')
+      sP2.addFormula('A', new RuleReiteration(p.Step(1)))
+p.addSubProof(sP2)
+p.addFormula('A <-> B', new RuleBiImplicationIntro(sP1,sP2))
 
 p.check()
 
