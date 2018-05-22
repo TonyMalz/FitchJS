@@ -1531,7 +1531,14 @@ class RuleExistentialELim extends Rule{
                 return false;
             }
         }
-        return true;
+
+        for (const subterm of subProof.getSteps()) {
+            if ( String(subterm) === String(formula) ) {
+                return true;
+            } 
+        }
+        console.error(`Concluded formula '${formula}' was not found in subproof `)
+        return false;
     }
 }
 
