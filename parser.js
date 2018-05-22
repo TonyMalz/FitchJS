@@ -1346,6 +1346,72 @@ class RuleNegationIntro extends Rule{
     }
 }
 
+class RuleOrElim extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources; // subproof
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length < 3) {
+            console.error('Expected at least 3 sources');
+            return false;
+        }
+
+        if (! (formula instanceof Formula)) {
+            console.error('Expected a formula to validate')
+            return false;
+        }
+
+        let subProofs = []
+        let formOr = null;
+        for (const source of this.sources) {
+            if (source instanceof FormulaOr) {
+                formOr = source;
+            } else if ( source instanceof Proof) {
+                subProofs.push(source);
+            }
+        }
+
+        if (formOr === null) {
+            console.error('Expected one Disjuntion as Source')
+            return false;
+        }
+        if (formOr.terms.length !== subProofs.length) {
+            console.error('Expected as many subproofs as there are terms in Disjunction')
+            return false;
+        }
+
+        let countValidsubProofs = 0;
+        for ( const term of formOr.terms) {
+            for (const proof of subProofs) {
+                let foundTerm = false
+                for (const premise of proof.getPremises()){
+                    if (String(term) === String(premise)) {
+                        for (const subformula of proof.getSteps()){
+                            if (String(formula) === String(subformula)){
+                                countValidsubProofs++;
+                                break;
+                            }
+                        }
+                        foundTerm = true;
+                        break;
+                    }
+                }
+                if (foundTerm)
+                    break;
+            }
+        }
+
+        if (countValidsubProofs !== subProofs.length) {
+            console.error('Not all disjunctive terms have been proven in given subproofs')
+            return false;
+        }
+
+        return true;
+
+    }
+}
+
 
 class Proof {
     constructor(goal=null){
@@ -1505,6 +1571,28 @@ let sP2 = new Proof()
       sP2.addFormula('A', new RuleReiteration(p.Step(1)))
 p.addSubProof(sP2)
 p.addFormula('A <-> B', new RuleBiImplicationIntro(sP1,sP2))
+
+p.check()
+
+
+
+gLineNo = 0;
+p = new Proof()
+p.addPremise('A or B or C')
+p.addPremise('Peter')
+sP1 = new Proof()
+      sP1.addPremise('A')
+      sP1.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sP1)
+sP2 = new Proof()
+      sP2.addPremise('B')
+      sP2.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sP2)
+let sP3 = new Proof()
+      sP3.addPremise('C')
+      sP3.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sP3)
+p.addFormula('Peter', new RuleOrElim(sP1,sP2,sP3,p.Step(1)))
 
 p.check()
 
