@@ -1456,7 +1456,7 @@ class RuleUniversalIntro extends Rule{
         }
         // FIXME check var in current and all other parent proofs
         if (oldVar !== String(premise)){
-            console.error(`Free variable '${premise}' does not match with deduction rule`);
+            console.error(`Expected free variable '${oldVar}' instead of '${premise}' in premise `);
             return false;
         }
 
@@ -1469,6 +1469,71 @@ class RuleUniversalIntro extends Rule{
     }
 }
 
+
+class RuleExistentialELim extends Rule{
+    constructor(...sources){
+        super();
+        this.sources = sources; // subproof
+    }
+    validate(formula) {
+        if (!(this.sources instanceof Array) || this.sources.length != 2) {
+            console.error('Expected exactly 2 sources');
+            return false;
+        }
+
+        if (! (formula instanceof Formula)) {
+            console.error('Expected a formula to validate')
+            return false;
+        }
+
+        let subProof = null;
+        let existential = null;
+        for (const source of this.sources) {
+            if ((source instanceof FormulaQuantified) && source.quantifier.type === TokenType.EXISTS) {
+                existential = source;
+            } else if ( source instanceof Proof) {
+                subProof = source;
+            }
+        }
+
+        if (!subProof) {
+            console.error('Expected one subproof as source')
+            return false;
+        }
+        if (!existential) {
+            console.error('Expected one existential quantified formula as source')
+            return false;
+        }
+
+        // check P(t,a,t) <- P(x,a,x)
+        const premise = subProof.getPremises()[subProof.getPremises().length - 1];
+        const it = premise[Symbol.iterator]();
+        let oldVar = null;
+        let newVar = null;
+        for (const term of existential.right){
+            const premiseTerm = it.next().value;
+            if (! (term instanceof TermVariable))
+                continue;
+            if (String(term) !== String(premiseTerm)){
+                oldVar = String(term); // x
+                newVar = String(premiseTerm); // a
+                break;
+            }
+        }
+        // FIXME check var in current and all other parent proofs
+
+        // check if free var does not exist in conluded term
+        for (const term of formula){
+            if (! (term instanceof TermVariable))
+                continue;
+            if (String(term) === String(newVar)){
+                console.error(`Variable ${newVar} occurs in concluded formula, which is not allowed`)
+                return false;
+            }
+        }
+        return true;
+    }
+}
 
 class Proof {
     constructor(goal=null){
@@ -1596,22 +1661,22 @@ p.addPremise('B')
 p.addPremise('(A ∧ B) -> C')
 p.addFormula('A ∧ B', new RuleAndIntro(p.Step(1),p.Step(2)))
 p.addFormula('C', new RuleImplicationElim(p.Step(4),p.Step(3)))
-let sP = new Proof()
-      sP.addPremise('A')
-      sP.addFormula('C', new RuleReiteration(p.Step(5)))
-p.addSubProof(sP)
-p.addFormula('A -> C', new RuleImplicationIntro(sP))
+let sp = new Proof()
+      sp.addPremise('A')
+      sp.addFormula('C', new RuleReiteration(p.Step(5)))
+p.addSubProof(sp)
+p.addFormula('A -> C', new RuleImplicationIntro(sp))
 
 p.check()
 
 gLineNo = 0;
 p = new Proof()
 p.addPremise('¬A')
-sP = new Proof()
-      sP.addPremise('A')
-      sP.addFormula('⊥', new RuleBottomIntro(p.Step(1),sP.Step(1)))
-p.addSubProof(sP)
-p.addFormula('¬A', new RuleNegationIntro(sP))
+sp = new Proof()
+      sp.addPremise('A')
+      sp.addFormula('⊥', new RuleBottomIntro(p.Step(1),sp.Step(1)))
+p.addSubProof(sp)
+p.addFormula('¬A', new RuleNegationIntro(sp))
 
 p.check()
 
@@ -1619,15 +1684,15 @@ gLineNo = 0;
 p = new Proof()
 p.addPremise('A')
 p.addPremise('B')
-let sP1 = new Proof()
-      sP1.addPremise('A')
-      sP1.addFormula('B', new RuleReiteration(p.Step(2)))
-p.addSubProof(sP1)
-let sP2 = new Proof()
-      sP2.addPremise('B')
-      sP2.addFormula('A', new RuleReiteration(p.Step(1)))
-p.addSubProof(sP2)
-p.addFormula('A <-> B', new RuleBiImplicationIntro(sP1,sP2))
+let sp1 = new Proof()
+      sp1.addPremise('A')
+      sp1.addFormula('B', new RuleReiteration(p.Step(2)))
+p.addSubProof(sp1)
+let sp2 = new Proof()
+      sp2.addPremise('B')
+      sp2.addFormula('A', new RuleReiteration(p.Step(1)))
+p.addSubProof(sp2)
+p.addFormula('A <-> B', new RuleBiImplicationIntro(sp1,sp2))
 
 p.check()
 
@@ -1637,19 +1702,19 @@ gLineNo = 0;
 p = new Proof()
 p.addPremise('A or B or C')
 p.addPremise('Peter')
-sP1 = new Proof()
-      sP1.addPremise('A')
-      sP1.addFormula('Peter', new RuleReiteration(p.Step(2)))
-p.addSubProof(sP1)
-sP2 = new Proof()
-      sP2.addPremise('B')
-      sP2.addFormula('Peter', new RuleReiteration(p.Step(2)))
-p.addSubProof(sP2)
-let sP3 = new Proof()
-      sP3.addPremise('C')
-      sP3.addFormula('Peter', new RuleReiteration(p.Step(2)))
-p.addSubProof(sP3)
-p.addFormula('Peter', new RuleOrElim(sP1,sP2,sP3,p.Step(1)))
+sp1 = new Proof()
+      sp1.addPremise('A')
+      sp1.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sp1)
+sp2 = new Proof()
+      sp2.addPremise('B')
+      sp2.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sp2)
+let sp3 = new Proof()
+      sp3.addPremise('C')
+      sp3.addFormula('Peter', new RuleReiteration(p.Step(2)))
+p.addSubProof(sp3)
+p.addFormula('Peter', new RuleOrElim(sp1,sp2,sp3,p.Step(1)))
 
 p.check()
 
@@ -1658,13 +1723,26 @@ gLineNo = 0;
 p = new Proof()
 p.addPremise('∀x(P(x, t) → A(x, t))')
 p.addPremise('∀x(P(x, t))')
-sP = new Proof()
-      sP.addPremise('c')
-      sP.addFormula('P(c,t) -> A(c,t) ', new RuleUniversalElim(p.Step(1)))
-      sP.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
-      sP.addFormula('A(c,t)', new RuleImplicationElim(sP.Step(2),sP.Step(3)))
-p.addSubProof(sP)
-p.addFormula('∀x(A(x, t))', new RuleUniversalIntro(sP))
+sp = new Proof()
+      sp.addPremise('c')
+      sp.addFormula('P(c,t) -> A(c,t) ', new RuleUniversalElim(p.Step(1)))
+      sp.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
+      sp.addFormula('A(c,t)', new RuleImplicationElim(sp.Step(2),sp.Step(3)))
+p.addSubProof(sp)
+p.addFormula('∀x(A(x, t))', new RuleUniversalIntro(sp))
+p.check()
+
+gLineNo = 0;
+p = new Proof()
+p.addPremise('∃x(P(x, t) → A(x, t))')
+p.addPremise('∀x(P(x, t))')
+sp = new Proof()
+      sp.addPremise('P(c, t) → A(c, t)')
+      sp.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
+      sp.addFormula('A(c,t)', new RuleImplicationElim(sp.Step(1),sp.Step(2)))
+      sp.addFormula('∃x(A(x,t))', new RuleExistentialIntro(sp.Step(3)))
+p.addSubProof(sp)
+p.addFormula('∃x(A(x, t))', new RuleExistentialELim(sp,p.Step(1)))
 p.check()
 
 //testParser()
