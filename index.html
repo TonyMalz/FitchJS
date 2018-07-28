@@ -4,28 +4,60 @@
     <title>Fitch Editor</title>
     <meta charset="utf-8">
     <style>
+    main {
+            font-family: "Consolas";
+            font-size: 20px;
+            display: grid;
+            margin : 20px;
+            outline: 0;
+            !border-left: 1px solid black;
+        }
         .editor
         {   
-            border: 1px solid black;
-            width: 90%;
+            border: 1px solid white;
+            width: 100%;
             height: 20px;
-            font-family: "Consolas";
             overflow: hidden;
+            margin : 0px;
+            padding-bottom: 5px;
         }
+        .editor::before {
+            font-size: 12px;
+            padding-right: 10px;
+
+            content: attr(data-line-number);
+        }
+        .editor:hover
+        {   
+            border-top: 1px solid rgba(0,0,0, 0.05);
+            border-bottom: 1px solid rgba(0,0,0, 0.05);
+        }
+        .editor:focus
+        {   
+            border-top: 1px solid rgba(0,0,0, 0);
+            border-bottom: 1px solid rgba(0,0,0, 0);
+            background: rgba(253, 253, 231, 1);
+        }
+        .editor:read-write:focus {
+             outline: none;
+        }
+        
     </style>
 </head>
 <body>
+    <main id="editor">
+        <div data-line-number=1 id="l1" class="editor" contenteditable="true" spellcheck="false">Line 1</div>
+        <div data-line-number=2 id="l2" class="editor" contenteditable="true" spellcheck="false">Line 2</div>
+        <div data-line-number=3 id="l3" class="editor" contenteditable="true" spellcheck="false">Line 3</div>
+    </main>
+    <br><br><br><br><br>
+    <div id="caretPos"></div>
     <button onclick="setCursor()">set cursor</button>
-    <div id="l1" class="editor" contenteditable="true" spellcheck="false">Line 1</div>
-    <div id="l2" class="editor" contenteditable="true" spellcheck="false">Line 2</div>
-    <div id="l3" class="editor" contenteditable="true" spellcheck="false">Line 3</div>
-   <div id="caretPos"></div>
-   
     <div class="codeoutput">
         <pre class="htmloutput">
         </pre>
     </div>
 </body>
 <script src='main.js'></script>
-<script src='parser.js'></script>
+<!-- <script src='parser.js'></script> -->
 </html>

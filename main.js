@@ -47,50 +47,69 @@ function getCaretPosition() {
   return -1;
 }
 
-function showCaretPos() {
-  let el = this;
+//XXX FIXME
+let lastLineNo  = 3;
+let caretPos = 0;
+
+function showCaretPos(event) {
+  let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
-  caretPosEl.innerHTML = "Caret position in line: " + this.id + " at index: " + getCaretPosition(); //getCaretCharacterOffsetWithin(el);
+  caretPos = getCaretPosition();
+  caretPosEl.innerHTML = "Caret position in line: " + el.dataset.lineNumber + " at index: " + caretPos; //getCaretCharacterOffsetWithin(el);
 }
 
 //document.body.onkeyup = showCaretPos;
 //document.body.onmouseup = showCaretPos;
+function handleKeydown(event) {
+    const that = event.target;
+    if (event.defaultPrevented) {
+        return; // Do nothing if the event was already processed
+    }
+    let lineNo = parseInt(that.dataset.lineNumber);
+    switch (event.key) {
+        case "ArrowDown":
+          console.log('down',lineNo);
+          if (lineNo < lastLineNo) {
+            let next = document.getElementById('l'+(lineNo + 1));
+            SetCaretPosition(next,caretPos);
+          }
+          break;
+        case "ArrowUp":
+          console.log('up');
+          if (lineNo > 1) {
+            let next = document.getElementById('l'+(lineNo - 1));
+            SetCaretPosition(next,caretPos);
+          }
+          break;
+        case "Enter":
+          console.log('Enter');
+          let line = `<div data-line-number=${lineNo+1} id="l${lineNo+1}" class="editor" contenteditable="true" spellcheck="false">Line ${lineNo+1}</div>`
+          that.insertAdjacentHTML('afterend',line);
+          let next = document.getElementById('l'+(lineNo + 1));
+          lastLineNo = Math.max(lastLineNo, (lineNo + 1));
+          SetCaretPosition(next,6);
+          break;
+        default:
+          return; // Quit when this doesn't handle the key event.
+    }
+
+    // Cancel the default action to avoid it being handled twice
+    event.preventDefault();
+}
+
 
     window.addEventListener("load", function(){
-        let ttt = document.getElementsByClassName('editor');
-        for (let i=0;i<ttt.length;i++){
-            ttt[i].addEventListener('keyup', showCaretPos, false);
-            ttt[i].addEventListener('mouseup', showCaretPos, false);
-            ttt[i].addEventListener("keydown", function (event) {
-              if (event.defaultPrevented) {
-                return; // Do nothing if the event was already processed
-              }
-              let lineNo = parseInt(this.id[1]);
-              switch (event.key) {
-                case "ArrowDown":
-                  console.log('down',lineNo);
-                  if (lineNo > 0 && lineNo < 3) {
-                    let next = document.getElementById('l'+(lineNo + 1));
-                    SetCaretPosition(next,3);
-                  }
-                  break;
-                case "ArrowUp":
-                  console.log('up');
-                  if (lineNo > 1 && lineNo < 4) {
-                    let next = document.getElementById('l'+(lineNo - 1));
-                    SetCaretPosition(next,3);
-                  }
-                  break;
-                default:
-                  return; // Quit when this doesn't handle the key event.
-              }
-
-              // Cancel the default action to avoid it being handled twice
-              event.preventDefault();
-            }, true);
-        }
-
-        document.execCommand('styleWithCSS', false, true);
+        // let lines = document.getElementsByClassName('editor');
+        // for (let i=0;i<lines.length;i++){
+        //     lines[i].addEventListener('keyup', showCaretPos, false);
+        //     lines[i].addEventListener('mouseup', showCaretPos, false);
+        //     lines[i].addEventListener("keydown", handleKeydown , true);
+        // }
+        const editor = document.getElementById('editor');
+        editor.addEventListener("keydown", handleKeydown , true);
+        editor.addEventListener('keyup', showCaretPos, false);
+        editor.addEventListener('mouseup', showCaretPos, false);
+        //document.execCommand('styleWithCSS', false, true);
     }, false);
     
     function setCursor() {
@@ -103,24 +122,36 @@ function showCaretPos() {
         // Loop through all child nodes
         for(let node of el.childNodes){
             if(node.nodeType == 3){ // we have a text node
-                if(node.length >= pos){
-                    // finally add our range
-                    let range = document.createRange(),
-                        sel = window.getSelection();
-                    range.setStart(node,pos);
-                    range.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    return -1; // we are done
-                }else{
-                    pos -= node.length;
-                }
-            }else{
-                pos = SetCaretPosition(node,pos);
-                if(pos == -1){
-                    return -1; // no need to finish the for loop
-                }
+                pos = Math.min(node.length,pos);
+                // finally add our range
+                let range = document.createRange(),
+                    sel = window.getSelection();
+                range.setStart(node,pos);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                return -1; // we are done
+                
             }
+            // if(node.nodeType == 3){ // we have a text node
+            //     if(node.length >= pos){
+            //         // finally add our range
+            //         let range = document.createRange(),
+            //             sel = window.getSelection();
+            //         range.setStart(node,pos);
+            //         range.collapse(true);
+            //         sel.removeAllRanges();
+            //         sel.addRange(range);
+            //         return -1; // we are done
+            //     }else{
+            //         pos -= node.length;
+            //     }
+            // } else {
+            //     pos = SetCaretPosition(node,pos);
+            //     if(pos == -1){
+            //         return -1; // no need to finish the for loop
+            //     }
+            // }
         }
         return pos; // needed because of recursion stuff
     }
