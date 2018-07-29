@@ -58,6 +58,31 @@ function showCaretPos(event) {
   caretPosEl.innerHTML = "Caret position in line: " + el.dataset.lineNumber + " at index: " + caretPos; //getCaretCharacterOffsetWithin(el);
 }
 
+
+let mousedown;
+let activeLine = null;
+function handleMouse(event) {
+    //console.log(event)
+    const that = event.target;
+    switch (event.type) {
+        case 'mousedown':
+            mousedown = event;
+            if(activeLine !== null){
+                activeLine.contentEditable = 'false';
+            }
+            break;
+        case 'mouseup':
+            if (Math.abs(mousedown.clientX - event.clientX) < 3){
+                that.contentEditable = 'true';
+                that.focus();
+                activeLine = that;
+            }
+            break;
+    }
+    
+    //event.preventDefault();
+}
+
 //document.body.onkeyup = showCaretPos;
 //document.body.onmouseup = showCaretPos;
 function handleKeydown(event) {
@@ -83,11 +108,16 @@ function handleKeydown(event) {
           break;
         case "Enter":
           console.log('Enter');
-          let line = `<div data-line-number=${lineNo+1} id="l${lineNo+1}" class="editor" contenteditable="true" spellcheck="false">Line ${lineNo+1}</div>`
+          let line = `<div data-line-number=${lineNo+1} id="l${lineNo+1}" class="editor" spellcheck="false">Line ${lineNo+1}</div>`
           that.insertAdjacentHTML('afterend',line);
           let next = document.getElementById('l'+(lineNo + 1));
           lastLineNo = Math.max(lastLineNo, (lineNo + 1));
-          SetCaretPosition(next,6);
+          SetCaretPosition(next,caretPos);
+          break;
+        case "Delete":
+          console.log('Delete');
+          that.parentNode.removeChild(that);
+          SetCaretPosition(document.getElementById('l'+(lineNo - 1)),caretPos);
           break;
         default:
           return; // Quit when this doesn't handle the key event.
@@ -108,7 +138,9 @@ function handleKeydown(event) {
         const editor = document.getElementById('editor');
         editor.addEventListener("keydown", handleKeydown , true);
         editor.addEventListener('keyup', showCaretPos, false);
-        editor.addEventListener('mouseup', showCaretPos, false);
+        editor.addEventListener("mousedown", handleMouse , false);
+        editor.addEventListener('mouseup', handleMouse, false);
+        //editor.addEventListener('mouseout', handleMouse, false);
         //document.execCommand('styleWithCSS', false, true);
     }, false);
     
@@ -119,6 +151,11 @@ function handleKeydown(event) {
 
     // Move caret to a specific point in a DOM element
     function SetCaretPosition(el, pos){
+        el.contentEditable = 'true';
+        if(activeLine !== null){
+                activeLine.contentEditable = 'false';
+        }
+        activeLine = el;
         // Loop through all child nodes
         for(let node of el.childNodes){
             if(node.nodeType == 3){ // we have a text node

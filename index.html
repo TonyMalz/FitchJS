@@ -7,6 +7,7 @@
     main {
             font-family: "Consolas";
             font-size: 20px;
+            color: #71b6ff;
             display: grid;
             margin : 20px;
             outline: 0;
@@ -14,12 +15,13 @@
         }
         .editor
         {   
-            border: 1px solid white;
+            border: 1px solid #2e2e2e;
             width: 100%;
             height: 20px;
             overflow: hidden;
             margin : 0px;
             padding-bottom: 5px;
+            word-break: break-all;
         }
         .editor::before {
             font-size: 12px;
@@ -36,19 +38,22 @@
         {   
             border-top: 1px solid rgba(0,0,0, 0);
             border-bottom: 1px solid rgba(0,0,0, 0);
-            background: rgba(253, 253, 231, 1);
+            background: rgb(65, 65, 65);
         }
         .editor:read-write:focus {
              outline: none;
+        }
+        body {
+            background: #2e2e2e;
         }
         
     </style>
 </head>
 <body>
     <main id="editor">
-        <div data-line-number=1 id="l1" class="editor" contenteditable="true" spellcheck="false">Line 1</div>
-        <div data-line-number=2 id="l2" class="editor" contenteditable="true" spellcheck="false">Line 2</div>
-        <div data-line-number=3 id="l3" class="editor" contenteditable="true" spellcheck="false">Line 3</div>
+        <div data-line-number=1 id="l1" class="editor" spellcheck="false">Line 1</div>
+        <div data-line-number=2 id="l2" class="editor" spellcheck="false">Line 2</div>
+        <div data-line-number=3 id="l3" class="editor" spellcheck="false">Line 3</div>
     </main>
     <br><br><br><br><br>
     <div id="caretPos"></div>
