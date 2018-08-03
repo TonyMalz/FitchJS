@@ -128,21 +128,21 @@ function handleKeydown(event) {
 }
 
 
-    window.addEventListener("load", function(){
-        // let lines = document.getElementsByClassName('editor');
-        // for (let i=0;i<lines.length;i++){
-        //     lines[i].addEventListener('keyup', showCaretPos, false);
-        //     lines[i].addEventListener('mouseup', showCaretPos, false);
-        //     lines[i].addEventListener("keydown", handleKeydown , true);
-        // }
-        const editor = document.getElementById('editor');
-        editor.addEventListener("keydown", handleKeydown , true);
-        editor.addEventListener('keyup', showCaretPos, false);
-        editor.addEventListener("mousedown", handleMouse , false);
-        editor.addEventListener('mouseup', handleMouse, false);
-        //editor.addEventListener('mouseout', handleMouse, false);
-        //document.execCommand('styleWithCSS', false, true);
-    }, false);
+    // window.addEventListener("load", function(){
+    //     // let lines = document.getElementsByClassName('editor');
+    //     // for (let i=0;i<lines.length;i++){
+    //     //     lines[i].addEventListener('keyup', showCaretPos, false);
+    //     //     lines[i].addEventListener('mouseup', showCaretPos, false);
+    //     //     lines[i].addEventListener("keydown", handleKeydown , true);
+    //     // }
+    //     const editor = document.getElementById('editor');
+    //     editor.addEventListener("keydown", handleKeydown , true);
+    //     editor.addEventListener('keyup', showCaretPos, false);
+    //     editor.addEventListener("mousedown", handleMouse , false);
+    //     editor.addEventListener('mouseup', handleMouse, false);
+    //     //editor.addEventListener('mouseout', handleMouse, false);
+    //     //document.execCommand('styleWithCSS', false, true);
+    // }, false);
     
     function setCursor() {
         const line = document.getElementById('l3');
