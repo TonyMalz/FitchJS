@@ -130,6 +130,8 @@ function handleKeydown(event) {
             if (sel.type === 'Range') {
                 // only delete selection
                 range.deleteContents();
+                // XXX check empty lines and line numbers past deleted lines
+
             } else {
                 // Delete whole line if line is empty
                 if (that.innerText.length === 0 ){
@@ -170,11 +172,19 @@ function handlePaste(event) {
     }
     range.collapse()
     that = event.target
-    that.contentEditable = 'true';
-    that.focus();
-    activeLine = that;
-    //XXX TODO
-    //lines.forEach()
+    if (lines.length == 1) {
+        that.contentEditable = 'true';
+        that.focus();
+        return
+    }
+    let lastLine = that;
+    let currentLine = parseInt(that.dataset.lineNumber);
+    for (let i=1; i<lines.length; i++){
+       const newLine = editor.addNewLineAfter(currentLine++);
+       newLine.innerText = lines[i];
+       lastLine = newLine;
+    }
+    SetCaretPosition(lastLine,lastLine.innerText.length);
 }
 
 window.addEventListener("load", function(){
@@ -188,69 +198,6 @@ window.addEventListener("load", function(){
 
 }, false);
 
-
-
-
-//document.body.onkeyup = showCaretPos;
-//document.body.onmouseup = showCaretPos;
-// function handleKeydown(event) {
-//     const that = event.target;
-//     if (event.defaultPrevented) {
-//         return; // Do nothing if the event was already processed
-//     }
-//     let lineNo = parseInt(that.dataset.lineNumber);
-//     switch (event.key) {
-//         case "ArrowDown":
-//           console.log('down',lineNo);
-//           if (lineNo < lastLineNo) {
-//             let next = document.getElementById('l'+(lineNo + 1));
-//             SetCaretPosition(next,caretPos);
-//           }
-//           break;
-//         case "ArrowUp":
-//           console.log('up');
-//           if (lineNo > 1) {
-//             let next = document.getElementById('l'+(lineNo - 1));
-//             SetCaretPosition(next,caretPos);
-//           }
-//           break;
-//         case "Enter":
-//           console.log('Enter');
-//           let line = `<div data-line-number=${lineNo+1} id="l${lineNo+1}" class="editor" spellcheck="false">Line ${lineNo+1}</div>`
-//           that.insertAdjacentHTML('afterend',line);
-//           let next = document.getElementById('l'+(lineNo + 1));
-//           lastLineNo = Math.max(lastLineNo, (lineNo + 1));
-//           SetCaretPosition(next,caretPos);
-//           break;
-//         case "Delete":
-//           console.log('Delete');
-//           that.parentNode.removeChild(that);
-//           SetCaretPosition(document.getElementById('l'+(lineNo - 1)),caretPos);
-//           break;
-//         default:
-//           return; // Quit when this doesn't handle the key event.
-//     }
-
-//     // Cancel the default action to avoid it being handled twice
-//     event.preventDefault();
-// }
-
-
-    // window.addEventListener("load", function(){
-    //     // let lines = document.getElementsByClassName('editor');
-    //     // for (let i=0;i<lines.length;i++){
-    //     //     lines[i].addEventListener('keyup', showCaretPos, false);
-    //     //     lines[i].addEventListener('mouseup', showCaretPos, false);
-    //     //     lines[i].addEventListener("keydown", handleKeydown , true);
-    //     // }
-    //     const editor = document.getElementById('editor');
-    //     editor.addEventListener("keydown", handleKeydown , true);
-    //     editor.addEventListener('keyup', showCaretPos, false);
-    //     editor.addEventListener("mousedown", handleMouse , false);
-    //     editor.addEventListener('mouseup', handleMouse, false);
-    //     //editor.addEventListener('mouseout', handleMouse, false);
-    //     //document.execCommand('styleWithCSS', false, true);
-    // }, false);
     
     function setCursor() {
         const line = document.getElementById('l3');
