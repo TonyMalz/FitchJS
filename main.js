@@ -53,6 +53,9 @@ function getCaretPosition() {
 //XXX FIXME
 let lastLineNo  = 3;
 let caretPos = 0;
+let selectedLines = null;
+let selectedLinesStart = 0;
+let selectedLinesEnd = 0;
 
 function showCaretPos(event) {
   let el = event.target;
@@ -70,6 +73,7 @@ function handleMouse(event) {
     const that = event.target;
     switch (event.type) {
         case 'mousedown':
+            selectedLines = null;
             mousedown = event;
             if(activeLine !== null){
                 activeLine.contentEditable = 'false';
@@ -77,16 +81,27 @@ function handleMouse(event) {
             break;
         case 'mouseup':
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
-                that.contentEditable = 'true';
-                that.focus();
-                activeLine = that;
+                // only update if a line was selected
+                if (that.className === 'line' || that.parentNode.className === 'line'){
+                    that.contentEditable = 'true';
+                    that.focus();
+                    activeLine = that;
+                }
             }
             const sel = window.getSelection()
             if (sel.type === 'Range') {
                 const range = sel.getRangeAt(0)
                 const fragments = range.cloneContents()
                 const nodeList= fragments.querySelectorAll('.line')
-                console.log(nodeList)
+                if (nodeList.length > 0)
+                    selectedLines = nodeList;
+                else {
+                    if (that.className === 'line')
+                        selectedLines = [that];
+                }
+                selectedLinesStart = range.startOffset;
+                selectedLinesEnd = range.endOffset;
+                console.log(selectedLines)
             }
             
             break;
@@ -103,6 +118,17 @@ function handleKeydown(event) {
     }
     const lineNo = parseInt(that.dataset.lineNumber);
     switch (event.key) {
+        case "d":
+          console.log('d',lineNo,event);
+          if (lineNo > 0 && event.ctrlKey === true ) {
+            console.log('delete line');
+            const next = editor.removeLine(lineNo);
+            if (next !== null)
+                SetCaretPosition(next,caretPos);
+          } else {
+            return;
+          }
+          break;
         case "ArrowDown":
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
@@ -128,9 +154,36 @@ function handleKeydown(event) {
             const sel = window.getSelection();
             const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
-                // only delete selection
-                range.deleteContents();
+                
                 // XXX check empty lines and line numbers past deleted lines
+                if (selectedLines !== null && selectedLines.length > 1) {
+                    console.log(selectedLines)
+                    // only delete selection
+                    range.deleteContents();
+                    let removeLines = [];
+                    selectedLines.forEach(line => {
+                        const lineNo = parseInt(line.dataset.lineNumber);
+                        if (lineNo === 1)
+                            return;
+                        const lineAfterEdit = editor.getLineByNumber(lineNo);
+                        if (lineAfterEdit !== null && lineAfterEdit.innerText.trim().length == 0) {
+                            removeLines.push(lineNo);
+                        }
+                    });
+                    // start from last line
+                    removeLines.reverse()
+                    removeLines.forEach( line => {
+                        editor.removeLine(line);
+                    });
+                    const startLine = editor.getLineByNumber(selectedLines[0].dataset.lineNumber);
+                    SetCaretPosition(startLine,selectedLinesStart);
+                } else if(selectedLines !== null && selectedLines.length == 1){
+                    range.deleteContents();
+                    SetCaretPosition(selectedLines[0],selectedLinesStart);
+                    return;   
+                } else {
+                    return;
+                }
 
             } else {
                 // Delete whole line if line is empty
