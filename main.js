@@ -50,18 +50,12 @@ function getCaretPosition() {
   return -1;
 }
 
-//XXX FIXME
-let lastLineNo  = 3;
-let caretPos = 0;
-let selectedLines = null;
-let selectedLinesStart = 0;
-let selectedLinesEnd = 0;
 
 function showCaretPos(event) {
   let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
-  caretPos = getCaretPosition();
-  caretPosEl.innerHTML = "Caret position in line: " + el.dataset.lineNumber + " at index: " + caretPos; //getCaretCharacterOffsetWithin(el);
+  editor.caretPos = getCaretPosition();
+  caretPosEl.innerHTML = "Caret position in line: " + el.dataset.lineNumber + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
 }
 
 
@@ -73,7 +67,7 @@ function handleMouse(event) {
     const that = event.target;
     switch (event.type) {
         case 'mousedown':
-            selectedLines = null;
+            editor.selectedLines = null;
             mousedown = event;
             if(activeLine !== null){
                 activeLine.contentEditable = 'false';
@@ -94,14 +88,14 @@ function handleMouse(event) {
                 const fragments = range.cloneContents()
                 const nodeList= fragments.querySelectorAll('.line')
                 if (nodeList.length > 0)
-                    selectedLines = nodeList;
+                    editor.selectedLines = nodeList;
                 else {
-                    if (that.className === 'line')
-                        selectedLines = [that];
+                    if (that.className === 'line') {
+                        console.log('jetzt')
+                        editor.selectedLines = [that];
+                    }
                 }
-                selectedLinesStart = range.startOffset;
-                selectedLinesEnd = range.endOffset;
-                console.log(selectedLines)
+                console.log(editor.selectedLines)
             }
             
             break;
@@ -124,7 +118,7 @@ function handleKeydown(event) {
             console.log('delete line');
             const next = editor.removeLine(lineNo);
             if (next !== null)
-                SetCaretPosition(next,caretPos);
+                SetCaretPosition(next,editor.caretPos);
           } else {
             return;
           }
@@ -133,35 +127,40 @@ function handleKeydown(event) {
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
             const next = document.getElementById('l'+(lineNo + 1));
-            SetCaretPosition(next,caretPos);
+            editor.selectedLines = [next];
+            SetCaretPosition(next,editor.caretPos);
           }
           break;
         case "ArrowUp":
           console.log('up');
           if (lineNo > 1) {
             const next = document.getElementById('l'+(lineNo - 1));
-            SetCaretPosition(next,caretPos);
+            editor.selectedLines = [next];
+            SetCaretPosition(next,editor.caretPos);
           }
           break;
         case "Enter":
           console.log('Enter');
           const next = editor.addNewLineAfter(lineNo);
-          SetCaretPosition(next,caretPos);
+          editor.selectedLines = [next];
+          SetCaretPosition(next,editor.caretPos);
           break;
         case "Delete":
           console.log('Delete');
           {
             const sel = window.getSelection();
+            if (sel.type === 'None')
+                return;
             const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
                 
                 // XXX check empty lines and line numbers past deleted lines
-                if (selectedLines !== null && selectedLines.length > 1) {
-                    console.log(selectedLines)
+                if (editor.selectedLines !== null && editor.selectedLines.length > 1) {
+                    console.log(editor.selectedLines)
                     // only delete selection
                     range.deleteContents();
                     let removeLines = [];
-                    selectedLines.forEach(line => {
+                    editor.selectedLines.forEach(line => {
                         const lineNo = parseInt(line.dataset.lineNumber);
                         if (lineNo === 1)
                             return;
@@ -175,22 +174,20 @@ function handleKeydown(event) {
                     removeLines.forEach( line => {
                         editor.removeLine(line);
                     });
-                    const startLine = editor.getLineByNumber(selectedLines[0].dataset.lineNumber);
-                    SetCaretPosition(startLine,selectedLinesStart);
-                } else if(selectedLines !== null && selectedLines.length == 1){
+                    const startLine = editor.getLineByNumber(editor.selectedLines[0].dataset.lineNumber);
+                    SetCaretPosition(startLine,range.startOffset);
+                } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
                     range.deleteContents();
-                    SetCaretPosition(selectedLines[0],selectedLinesStart);
-                    return;   
+                    SetCaretPosition(editor.selectedLines[0],range.startOffset);
                 } else {
                     return;
                 }
-
             } else {
                 // Delete whole line if line is empty
                 if (that.innerText.length === 0 ){
                     const next = editor.removeLine(lineNo);
                     if (next !== null)
-                        SetCaretPosition(next,caretPos);
+                        SetCaretPosition(next,editor.caretPos);
                 }
                 else {
                     // propagate event further up
@@ -259,11 +256,19 @@ window.addEventListener("load", function(){
 
     // Move caret to a specific point in a DOM element
     function SetCaretPosition(el, pos){
+        //console.log('caret', pos, el)
+        if (el === null)
+            return -1;
         el.contentEditable = 'true';
-        if(activeLine !== null){
+        if(activeLine !== null && activeLine != el){
                 activeLine.contentEditable = 'false';
         }
         activeLine = el;
+
+        if (el.childNodes.length == 0) {
+            el.appendChild(document.createTextNode(''));           
+        }
+        //XXX FIXME
         // Loop through all child nodes
         for(let node of el.childNodes){
             if(node.nodeType == 3){ // we have a text node

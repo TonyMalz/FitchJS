@@ -5,6 +5,7 @@ class Editor {
 		this.numberOfLines = 3;//XXX FIXME
 		this.currentLine   = 1;
 		this.caretPos = 0;
+		this.selectedLines = [];
 		this.lines = [];
 	}
 	addNewLine(){
@@ -43,20 +44,20 @@ class Editor {
 	removeLine(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1 || (lineNumber == 1 && this.numberOfLines == 1))
 			return null;
-
-		// decrease line numbers of following lines by one
-		const lines = document.getElementsByClassName('line');
-        for (let i=lineNumber; i<lines.length; i++){
-            lines[i].dataset.lineNumber = i ;
-            lines[i].id = 'l' + i;
-        }
 		let line = this.getLineByNumber(lineNumber);
 		line.parentNode.removeChild(line);
+
+		// check and update line numbers
+		const lines = document.getElementsByClassName('line');
+        for (let i=0; i<lines.length; i++){
+            lines[i].dataset.lineNumber = i+1 ;
+            lines[i].id = 'l' + (i+1);
+        }
+		this.numberOfLines = lines.length;
 		//if last line was removed return previous line
-		if (lineNumber == this.numberOfLines){
-			return this.getLineByNumber(--this.numberOfLines);
+		if (lineNumber >= this.numberOfLines){
+			return this.getLineByNumber(this.numberOfLines);
 		}
-		this.numberOfLines--;
 		// return next line
 		return this.getLineByNumber(lineNumber);
 	}
