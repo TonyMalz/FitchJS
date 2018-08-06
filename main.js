@@ -62,7 +62,6 @@ function showCaretPos(event) {
 let mousedown = null;
 let activeLine = null;
 function handleMouse(event) {
-
     console.log(event)
     const that = event.target;
     switch (event.type) {
@@ -74,7 +73,7 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
-            if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
+            if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 4){
                 // only update if a line was selected
                 if (that.className === 'line' || that.parentNode.className === 'line'){
                     that.contentEditable = 'true';
@@ -90,21 +89,15 @@ function handleMouse(event) {
                 if (nodeList.length > 0)
                     editor.selectedLines = nodeList;
                 else {
-                    if (that.className === 'line') {
-                        console.log('jetzt')
-                        editor.selectedLines = [that];
-                    }
+                    editor.selectedLines = [that.closest('.line')];
                 }
                 console.log(editor.selectedLines)
             }
-            
             break;
     }
-    
-    //event.preventDefault();
 }
 
-
+const indentAmount = '50';
 function handleKeydown(event) {
     const that = event.target;
     if (event.defaultPrevented) {
@@ -142,8 +135,40 @@ function handleKeydown(event) {
         case "Enter":
           console.log('Enter');
           const next = editor.addNewLineAfter(lineNo);
+          next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
+          next.dataset.level = that.dataset.level;
           editor.selectedLines = [next];
           SetCaretPosition(next,editor.caretPos);
+          break;
+        case "Tab":
+          console.log('Tab');
+          let indentLevel = that.dataset.level;
+          if (event.shiftKey == true){
+            if (indentLevel > 0)
+                that.style.textIndent = (--indentLevel * indentAmount) + 'px';
+          } else {
+                that.style.textIndent = (++indentLevel * indentAmount) + 'px';
+          }
+          that.dataset.level = indentLevel;
+          break;
+        case "Backspace":
+            {
+                console.log('Backspace');
+                const sel = window.getSelection();
+                if (sel.type === "Caret") {
+                    const range = sel.getRangeAt(0);
+                    if (range.startOffset == 0) {
+                        let indentLevel = that.dataset.level;
+                        if (indentLevel > 0){
+                            that.style.textIndent = (--indentLevel * indentAmount) + 'px';
+                            that.dataset.level = indentLevel;
+                        }
+                    } else {
+                        return;
+                    }
+                }
+                return
+            }
           break;
         case "Delete":
           console.log('Delete');
@@ -207,8 +232,16 @@ function handleKeydown(event) {
 function handlePaste(event) {
     console.log('paste')
     event.preventDefault()
-    const lines = event.clipboardData.getData('text').split('\n')
-    let startline = event.target.dataset.lineNumber;
+    const lines = event.clipboardData.getData('text').split('\n');
+    let that = event.target;
+    if (that.nodeType == 3) {
+        // Firefox target is of type text node
+        that = that.parentNode;
+    }
+    const indentLevel =that.dataset.level;
+    const startline = that.closest('.line').dataset.lineNumber;
+    if (startline < 1)
+        return
     if (lines.length == 0)
         return
     const text = lines[0];
@@ -221,7 +254,6 @@ function handlePaste(event) {
         range.insertNode(document.createTextNode(text));
     }
     range.collapse()
-    that = event.target
     if (lines.length == 1) {
         that.contentEditable = 'true';
         that.focus();
@@ -232,21 +264,24 @@ function handlePaste(event) {
     for (let i=1; i<lines.length; i++){
        const newLine = editor.addNewLineAfter(currentLine++);
        newLine.innerText = lines[i];
+       newLine.dataset.level = indentLevel;
+       newLine.style.textIndent = (indentLevel * indentAmount ) + 'px';
        lastLine = newLine;
     }
+    editor.selectedLines = [lastLine];
     SetCaretPosition(lastLine,lastLine.innerText.length);
 }
 
 window.addEventListener("load", function(){
     const ed = document.getElementById('editor');
-    ed.addEventListener('keyup', showCaretPos, true);
-    ed.addEventListener('paste', handlePaste, true);
-    document.addEventListener("keydown", handleKeydown , true);
+    ed.addEventListener('keyup', showCaretPos);
+    ed.addEventListener('paste', handlePaste);
+    document.addEventListener("keydown", handleKeydown);
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
-    window.addEventListener("mousedown", handleMouse , false);
-    window.addEventListener('mouseup', handleMouse, false);
+    window.addEventListener("mousedown", handleMouse);
+    window.addEventListener('mouseup', handleMouse);
 
-}, false);
+});
 
     
     function setCursor() {
