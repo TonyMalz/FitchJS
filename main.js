@@ -55,7 +55,8 @@ function showCaretPos(event) {
   let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
   editor.caretPos = getCaretPosition();
-  caretPosEl.innerHTML = "Caret position in line: " + el.dataset.lineNumber + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
+  const line = editor.selectedLines[0].dataset.lineNumber;
+  caretPosEl.innerHTML = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
 }
 
 
@@ -78,6 +79,14 @@ function handleMouse(event) {
                 if (that.className === 'line' || that.parentNode.className === 'line'){
                     that.contentEditable = 'true';
                     that.focus();
+                    editor.selectedLines = [that];
+                    console.log(editor.selectedLines)
+                    const sel = window.getSelection();
+                    if (sel.type === "Caret") {
+                        const range = sel.getRangeAt(0);
+                        editor.caretPos = range.startOffset;
+                        console.log(editor.caretPos)
+                    }
                     activeLine = that;
                 }
             }
@@ -97,6 +106,82 @@ function handleMouse(event) {
     }
 }
 
+// XXX FIXME: use tokenizer!!
+let suggestions = ['Hans','Hallo','Peter','leo','affe','MIESEL','Lola','wassertier(a)'];
+suggestions.sort( (a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+function suggest(search) {
+    // escape brackets
+    search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // enclose search term in brackets
+    const regex = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+    console.log(search,regex)
+
+    let results = [];
+    suggestions.filter( term => {
+        if (regex.test(term))
+            results.push(term.replace(regex,'<b>$1</b>'))
+    });
+    console.log(results)
+    return results;
+}
+
+let currentToken = null;
+let currentTokenLeft = 0;
+let tooltipElem;
+function handleKeyup(event) {
+    showCaretPos(event);
+    const key = event.key;
+    console.log('keyup', key.length, key)
+    const that = event.target;
+    if (tooltipElem) {
+        tooltipElem.remove();
+        tooltipElem = null;
+    }
+    if (key.length == 1){
+        // single alphabetic character starts search token sequence
+        if (currentToken == null && key.toLowerCase() >= 'a' && key.toLowerCase() <= 'z' ) {
+            currentToken = key;
+            currentTokenLeft = window.getSelection().getRangeAt(0).getBoundingClientRect().left
+        } else if (currentToken !== null) {
+            if (key != ' ')
+                currentToken += key;
+            else {
+                currentToken = null;
+                currentTokenLeft = 0;
+            }
+        }
+    } else if (key !== 'Shift' && key !== 'Control' && key !== 'Tab' && key !== 'Alt') {
+        //reset token
+        currentToken = null;
+        currentTokenLeft = 0;
+    }
+
+    console.log('Token:', currentToken)
+    if (currentToken !== null) {
+        let results = suggest(currentToken);
+        if (results.length == 0)
+            return;
+        let tooltipHtml = results.join('<br/>')
+        tooltipElem = document.createElement('div');
+        tooltipElem.className = 'tooltip';
+        tooltipElem.innerHTML = tooltipHtml;
+        document.body.append(tooltipElem);
+
+        // position it below line
+        let coords = that.getBoundingClientRect();
+        let left = currentTokenLeft - 20;
+        if (left < 0) left = 0; // don't cross the left window edge
+
+        let top = coords.top + that.offsetHeight;
+  
+        tooltipElem.style.left = left + 'px';
+        tooltipElem.style.top = top + 'px';
+    }
+
+}
+// XXX
+
+
 const indentAmount = '50';
 function handleKeydown(event) {
     const that = event.target;
@@ -106,6 +191,7 @@ function handleKeydown(event) {
     const lineNo = parseInt(that.dataset.lineNumber);
     switch (event.key) {
         case "d":
+        //delete current line
           console.log('d',lineNo,event);
           if (lineNo > 0 && event.ctrlKey === true ) {
             console.log('delete line');
@@ -274,7 +360,7 @@ function handlePaste(event) {
 
 window.addEventListener("load", function(){
     const ed = document.getElementById('editor');
-    ed.addEventListener('keyup', showCaretPos);
+    ed.addEventListener('keyup', handleKeyup);
     ed.addEventListener('paste', handlePaste);
     document.addEventListener("keydown", handleKeydown);
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
