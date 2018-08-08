@@ -88,7 +88,7 @@ class Scanner {
             this.start = this.current;
             this.scanToken();
         }
-        this.tokens.push(new Token(TokenType.EOF, "", null, this.line, this.start));
+        this.tokens.push(new Token(TokenType.EOF, "", null, this.line, this.current));
         return this.tokens;
     }
     
@@ -188,7 +188,7 @@ class Scanner {
 
             case '\n' :
                 
-                //this.line++;
+                this.line++;
                 break;
 
             default :
@@ -1661,7 +1661,7 @@ function justifyLine(line,rule){
 
 // -- test
 // TODO: step, line or premise for rule reference??
-
+/*
 let p = new Proof()
 p.addPremise('A')
 p.addPremise('B')
@@ -1883,3 +1883,4 @@ console.log( justifyLine(line36, new RuleExistentialIntro(line35)))
 
 //new Scanner('').keywords.forEach((k,v)=>console.log(k,v))
 }
+*/

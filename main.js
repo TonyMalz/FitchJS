@@ -128,38 +128,32 @@ function suggest(search) {
 let currentToken = null;
 let currentTokenLeft = 0;
 let tooltipElem;
+
 function handleKeyup(event) {
     showCaretPos(event);
     const key = event.key;
     console.log('keyup', key.length, key)
     const that = event.target;
+
+    // get token under caret position
+    const tokens = new Scanner(that.innerText,that.dataset.lineNumber).scanTokens();
+    const caretPos = getCaretPosition();
+    for (let token of tokens) {
+        const tokenEnd = token.pos + token.lexeme.length;
+        if (token.pos <= caretPos &&  caretPos <= tokenEnd) {
+            currentToken = token;
+            break;
+        }
+    }
+    console.log('currentToken', currentToken)
+
     if (tooltipElem) {
         tooltipElem.remove();
         tooltipElem = null;
     }
-
-    if (key.length == 1){
-        // single alphabetic character starts search token sequence
-        if (currentToken == null && key.toLowerCase() >= 'a' && key.toLowerCase() <= 'z' ) {
-            currentToken = key;
-            currentTokenLeft = window.getSelection().getRangeAt(0).getBoundingClientRect().left
-        } else if (currentToken !== null) {
-            if (key != ' ')
-                currentToken += key;
-            else {
-                currentToken = null;
-                currentTokenLeft = 0;
-            }
-        }
-    } else if (key !== 'Shift' && key !== 'Control' && key !== 'Tab' && key !== 'Alt') {
-        //reset token
-        currentToken = null;
-        currentTokenLeft = 0;
-    }
-
-    console.log('Token:', currentToken)
-    if (currentToken !== null) {
-        let results = suggest(currentToken);
+    
+    if (currentToken && currentToken.type !== TokenType.EOF) {
+        let results = suggest(currentToken.lexeme);
         if (results.length == 0)
             return;
         let tooltipHtml = results.join('<br/>')
@@ -169,16 +163,35 @@ function handleKeyup(event) {
         document.body.append(tooltipElem);
 
         // position it below line
-        let coords = that.getBoundingClientRect();
-        let left = currentTokenLeft - 20;
+        const coords = that.getBoundingClientRect();
+        const range = document.createRange();
+        range.setStart(that.childNodes[0],currentToken.pos);
+        currentTokenLeft = range.getBoundingClientRect().left;
+        let left = currentTokenLeft - 10;
         if (left < 0) left = 0; // don't cross the left window edge
 
         let top = coords.top + that.offsetHeight;
   
         tooltipElem.style.left = left + 'px';
         tooltipElem.style.top = top + 'px';
+        
+        if (key == 'Tab' || key == 'Enter') {
+            console.log('set');
+            //XXX FIXME
+            const suggestion = results[0].replace(/<\/?[^>]+(>|$)/g, "");
+            that.innerText = that.innerText.slice(0,currentToken.pos) +  suggestion + that.innerText.slice( currentToken.pos + currentToken.lexeme.length);
+            tooltipElem.remove();
+            tooltipElem = null;
+            SetCaretPosition(that,currentToken.pos + suggestion.length);
+        }
+        if (key == 'Escape') {
+            tooltipElem.remove();
+            tooltipElem = null;
+            currentToken = null;
+        }
     }
 
+    
 }
 // XXX
 
@@ -220,6 +233,9 @@ function handleKeydown(event) {
           }
           break;
         case "Enter":
+          if (tooltipElem){
+            break;
+          }
           console.log('Enter');
           const next = editor.addNewLineAfter(lineNo);
           next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
@@ -228,6 +244,10 @@ function handleKeydown(event) {
           SetCaretPosition(next,editor.caretPos);
           break;
         case "Tab":
+          if (tooltipElem){
+            break;
+          }
+
           console.log('Tab');
           let indentLevel = that.dataset.level;
           if (event.shiftKey == true){
