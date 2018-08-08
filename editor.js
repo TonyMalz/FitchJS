@@ -47,21 +47,24 @@ class Editor {
 		if (lineNumber > this.numberOfLines || lineNumber < 1 || (lineNumber == 1 && this.numberOfLines == 1))
 			return null;
 		let line = this.getLineByNumber(lineNumber);
-		line.parentNode.removeChild(line);
+		line.remove();
 
 		// check and update line numbers
-		const lines = document.getElementsByClassName('line');
-        for (let i=0; i<lines.length; i++){
-            lines[i].dataset.lineNumber = i+1 ;
-            lines[i].id = 'l' + (i+1);
-        }
-		this.numberOfLines = lines.length;
+		this.updateLineNumbers();
 		//if last line was removed return previous line
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
 		// return next line
 		return this.getLineByNumber(lineNumber);
+	}
+	updateLineNumbers(){
+		const lines = document.getElementsByClassName('line');
+        for (let i=0; i<lines.length; i++){
+            lines[i].dataset.lineNumber = i+1 ;
+            lines[i].id = 'l' + (i+1);
+        }
+        this.numberOfLines = lines.length;
 	}
 	getLineByNumber(lineNumber){
 		return document.getElementById('l'+lineNumber);

@@ -74,7 +74,7 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
-            if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 4){
+            if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
                 // only update if a line was selected
                 if (that.className === 'line' || that.parentNode.className === 'line'){
                     that.contentEditable = 'true';
@@ -137,6 +137,7 @@ function handleKeyup(event) {
         tooltipElem.remove();
         tooltipElem = null;
     }
+
     if (key.length == 1){
         // single alphabetic character starts search token sequence
         if (currentToken == null && key.toLowerCase() >= 'a' && key.toLowerCase() <= 'z' ) {
@@ -265,7 +266,6 @@ function handleKeydown(event) {
             const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
                 
-                // XXX check empty lines and line numbers past deleted lines
                 if (editor.selectedLines !== null && editor.selectedLines.length > 1) {
                     console.log(editor.selectedLines)
                     // only delete selection
@@ -273,18 +273,14 @@ function handleKeydown(event) {
                     let removeLines = [];
                     editor.selectedLines.forEach(line => {
                         const lineNo = parseInt(line.dataset.lineNumber);
-                        if (lineNo === 1)
+                        if (lineNo == 1)
                             return;
                         const lineAfterEdit = editor.getLineByNumber(lineNo);
                         if (lineAfterEdit !== null && lineAfterEdit.innerText.trim().length == 0) {
-                            removeLines.push(lineNo);
+                            lineAfterEdit.remove();
                         }
                     });
-                    // start from last line
-                    removeLines.reverse()
-                    removeLines.forEach( line => {
-                        editor.removeLine(line);
-                    });
+                    editor.updateLineNumbers();
                     const startLine = editor.getLineByNumber(editor.selectedLines[0].dataset.lineNumber);
                     SetCaretPosition(startLine,range.startOffset);
                 } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
@@ -295,7 +291,7 @@ function handleKeydown(event) {
                 }
             } else {
                 // Delete whole line if line is empty
-                if (that.innerText.length === 0 ){
+                if (that.innerText.length == 0 ){
                     const next = editor.removeLine(lineNo);
                     if (next !== null)
                         SetCaretPosition(next,editor.caretPos);
