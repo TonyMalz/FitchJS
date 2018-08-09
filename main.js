@@ -107,8 +107,8 @@ function handleMouse(event) {
 }
 
 // XXX FIXME: use tokenizer!!
-let suggestions = ['Hans','Hallo','Peter','leo','affe','MIESEL','Lola','wassertier(a)'];
-suggestions.sort( (a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+let suggestions = ['∧ And','∨ Or','∀ For All','¬ Not','⊥ Bottom','→ Implication','↔ Bi-Implication','∃ Exists'];
+//suggestions.sort( (a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 function suggest(search) {
     // escape brackets
     search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -125,17 +125,22 @@ function suggest(search) {
     return results;
 }
 
-let currentToken = null;
+
 let currentTokenLeft = 0;
 let tooltipElem;
+let tabProcessed = false;
+let enterProcessed = false;
+let selectionIndex = 0;
+let lineKeydown = 0;
 
 function handleKeyup(event) {
     showCaretPos(event);
     const key = event.key;
-    console.log('keyup', key.length, key)
     const that = event.target;
+    const lineNo = parseInt(that.dataset.lineNumber);
 
     // get token under caret position
+    let currentToken = null;
     const tokens = new Scanner(that.innerText,that.dataset.lineNumber).scanTokens();
     const caretPos = getCaretPosition();
     for (let token of tokens) {
@@ -146,63 +151,118 @@ function handleKeyup(event) {
         }
     }
     console.log('currentToken', currentToken)
-
     if (tooltipElem) {
         tooltipElem.remove();
         tooltipElem = null;
     }
-    
-    if (currentToken && currentToken.type !== TokenType.EOF) {
-        let results = suggest(currentToken.lexeme);
-        if (results.length == 0)
-            return;
-        let tooltipHtml = results.join('<br/>')
-        tooltipElem = document.createElement('div');
-        tooltipElem.className = 'tooltip';
-        tooltipElem.innerHTML = tooltipHtml;
-        document.body.append(tooltipElem);
 
-        // position it below line
-        const coords = that.getBoundingClientRect();
-        const range = document.createRange();
-        range.setStart(that.childNodes[0],currentToken.pos);
-        currentTokenLeft = range.getBoundingClientRect().left;
-        let left = currentTokenLeft - 10;
-        if (left < 0) left = 0; // don't cross the left window edge
 
-        let top = coords.top + that.offsetHeight;
-  
-        tooltipElem.style.left = left + 'px';
-        tooltipElem.style.top = top + 'px';
-        
-        if (key == 'Tab' || key == 'Enter') {
-            console.log('set');
-            //XXX FIXME
-            const suggestion = results[0].replace(/<\/?[^>]+(>|$)/g, "");
-            that.innerText = that.innerText.slice(0,currentToken.pos) +  suggestion + that.innerText.slice( currentToken.pos + currentToken.lexeme.length);
-            tooltipElem.remove();
-            tooltipElem = null;
-            SetCaretPosition(that,currentToken.pos + suggestion.length);
-        }
-        if (key == 'Escape') {
-            tooltipElem.remove();
-            tooltipElem = null;
-            currentToken = null;
+    //no autocompletion if lines were changed between key presses
+    if (lineNo != lineKeydown) {
+        return;
+    }
+    // add matching parenthesis
+    if (key == '(') {
+        const closeCount = (that.innerText.match(/\)/g) || []).length;
+        const openCount = (that.innerText.match(/\(/g)).length;
+        // XXX 
+        if (openCount != closeCount){
+            that.innerText = that.innerText.slice(0,caretPos) + ')' + that.innerText.slice(caretPos);
+            SetCaretPosition(that,caretPos);
         }
     }
 
+    let triggerAutocompletion = false;
+    if (key.length == 1 && key != ' ') {
+        triggerAutocompletion = true;
+    } else if (!enterProcessed && key == 'Enter' || !tabProcessed && key == 'Tab') {
+        triggerAutocompletion = true;
+    } else if (key == 'Control' || key == 'Shift') {
+        triggerAutocompletion = true;
+    } else if (key == 'ArrowUp') {
+        triggerAutocompletion = true;
+        selectionIndex--;
+    } else if (key == 'ArrowDown') {
+        triggerAutocompletion = true;
+        selectionIndex++;
+    } else {
+        triggerAutocompletion = false;
+        selectionIndex = 0;
+    }
+
+    if (triggerAutocompletion && currentToken && currentToken.type != TokenType.EOF) {
+        //search from beginnig of current token until caret position
+        let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
+        if (searchString.length != 0){
+            let results = suggest(searchString);
+            if (results.length == 0)
+                return;
+            if (selectionIndex < 0) {
+                selectionIndex = 0;
+            } else if (selectionIndex >= results.length) {
+                selectionIndex = results.length-1;
+            }
+            console.log('sel index', selectionIndex);
+
+            let tooltipHtml = '<ul>'; 
+            for (let i in results) {
+                if (selectionIndex == i)
+                    tooltipHtml += `<li class='tooltipHighlight'>${results[i]}`;
+                else
+                    tooltipHtml += `<li>${results[i]}`;
+            }
+            tooltipHtml += '</ul>';
+            tooltipElem = document.createElement('div');
+            tooltipElem.className = 'tooltip';
+            tooltipElem.innerHTML = tooltipHtml;
+            document.body.append(tooltipElem);
+
+            // position it below line
+            const coords = that.getBoundingClientRect();
+            const range = document.createRange();
+            range.setStart(that.childNodes[0],currentToken.pos);
+            currentTokenLeft = range.getBoundingClientRect().left;
+            let left = currentTokenLeft - 10;
+            if (left < 0) left = 0; // don't cross the left window edge
+
+            let top = coords.top + that.offsetHeight;
+            
+            tooltipElem.style.left = left + 'px';
+            tooltipElem.style.top = top + 'px';
+            
+            if ((key == 'Tab' || key == 'Enter')) {
+                console.log('set');
+                //XXX FIXME
+                const suggestion = results[selectionIndex].replace(/<\/?[^>]+(>|$)/g, "")[0];
+                that.innerText = that.innerText.slice(0,currentToken.pos) +  suggestion + that.innerText.slice( currentToken.pos + searchString.length);
+                tooltipElem.remove();
+                tooltipElem = null;
+                SetCaretPosition(that,currentToken.pos + suggestion.length);
+            }
+            if (key == 'Escape') {
+                tooltipElem.remove();
+                tooltipElem = null;
+                currentToken = null;
+            }
+        }
+    }
+    // end autocompletion
+
+    
     
 }
 // XXX
 
-
 const indentAmount = '50';
 function handleKeydown(event) {
+    enterProcessed = false;
+    tabProcessed = false;
     const that = event.target;
     if (event.defaultPrevented) {
         return; // Do nothing if the event was already processed
     }
     const lineNo = parseInt(that.dataset.lineNumber);
+    lineKeydown = lineNo;
     switch (event.key) {
         case "d":
         //delete current line
@@ -217,6 +277,9 @@ function handleKeydown(event) {
           }
           break;
         case "ArrowDown":
+            if (tooltipElem){
+              break;
+            }
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
             const next = document.getElementById('l'+(lineNo + 1));
@@ -225,6 +288,9 @@ function handleKeydown(event) {
           }
           break;
         case "ArrowUp":
+          if (tooltipElem){
+            break;
+          }
           console.log('up');
           if (lineNo > 1) {
             const next = document.getElementById('l'+(lineNo - 1));
@@ -242,6 +308,7 @@ function handleKeydown(event) {
           next.dataset.level = that.dataset.level;
           editor.selectedLines = [next];
           SetCaretPosition(next,editor.caretPos);
+          enterProcessed = true;
           break;
         case "Tab":
           if (tooltipElem){
@@ -257,6 +324,7 @@ function handleKeydown(event) {
                 that.style.textIndent = (++indentLevel * indentAmount) + 'px';
           }
           that.dataset.level = indentLevel;
+          tabProcessed = true;
           break;
         case "Backspace":
             {

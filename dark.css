@@ -77,6 +77,17 @@ aside {
     box-shadow: 3px 3px 3px rgba(0, 0, 0, .3);
     z-index: 99;
 }
-.tooltip > b {
+.tooltip b {
     background: rgba(0, 255, 174, 0.5);
+}
+.tooltip ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+.tooltip li {
+    padding-bottom: 5px;
+}
+.tooltipHighlight {
+    background: rgb(95, 95, 95);
 }
