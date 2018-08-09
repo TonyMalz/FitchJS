@@ -44,9 +44,15 @@ class Editor {
 		this.removeLine(this.currentLine)
 	}
 	removeLine(lineNumber){
-		if (lineNumber > this.numberOfLines || lineNumber < 1 || (lineNumber == 1 && this.numberOfLines == 1))
+		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return null;
-		let line = this.getLineByNumber(lineNumber);
+		const line = this.getLineByNumber(lineNumber);
+		if (lineNumber == 1 && this.numberOfLines == 1) {
+			// only remove contents if it is the only line left
+			line.textContent='';
+			return line;
+		}
+		
 		line.remove();
 
 		// check and update line numbers

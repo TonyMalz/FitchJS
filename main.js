@@ -56,7 +56,7 @@ function showCaretPos(event) {
   let caretPosEl = document.getElementById("caretPos");
   editor.caretPos = getCaretPosition();
   const line = editor.selectedLines[0].dataset.lineNumber;
-  caretPosEl.innerHTML = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
+  caretPosEl.textContent = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
 }
 
 
@@ -65,6 +65,10 @@ let activeLine = null;
 function handleMouse(event) {
     console.log(event)
     const that = event.target;
+    if (tooltipElem) {
+        tooltipElem.remove();
+        tooltipElem = null;
+    }
     switch (event.type) {
         case 'mousedown':
             editor.selectedLines = null;
@@ -141,7 +145,7 @@ function handleKeyup(event) {
 
     // get token under caret position
     let currentToken = null;
-    const tokens = new Scanner(that.innerText,that.dataset.lineNumber).scanTokens();
+    const tokens = new Scanner(that.textContent,that.dataset.lineNumber).scanTokens();
     const caretPos = getCaretPosition();
     for (let token of tokens) {
         const tokenEnd = token.pos + token.lexeme.length;
@@ -163,11 +167,11 @@ function handleKeyup(event) {
     }
     // add matching parenthesis
     if (key == '(') {
-        const closeCount = (that.innerText.match(/\)/g) || []).length;
-        const openCount = (that.innerText.match(/\(/g)).length;
+        const closeCount = (that.textContent.match(/\)/g) || []).length;
+        const openCount = (that.textContent.match(/\(/g)).length;
         // XXX 
         if (openCount != closeCount){
-            that.innerText = that.innerText.slice(0,caretPos) + ')' + that.innerText.slice(caretPos);
+            document.execCommand('insertText',false, ')');
             SetCaretPosition(that,caretPos);
         }
     }
@@ -234,7 +238,7 @@ function handleKeyup(event) {
                 console.log('set');
                 //XXX FIXME
                 const suggestion = results[selectionIndex].replace(/<\/?[^>]+(>|$)/g, "")[0];
-                that.innerText = that.innerText.slice(0,currentToken.pos) +  suggestion + that.innerText.slice( currentToken.pos + searchString.length);
+                that.textContent = that.textContent.slice(0,currentToken.pos) +  suggestion + that.textContent.slice( currentToken.pos + searchString.length);
                 tooltipElem.remove();
                 tooltipElem = null;
                 SetCaretPosition(that,currentToken.pos + suggestion.length);
@@ -342,9 +346,8 @@ function handleKeydown(event) {
                         return;
                     }
                 }
-                return
             }
-          break;
+          //break; intentionally Fall through to delete...
         case "Delete":
           console.log('Delete');
           {
@@ -364,7 +367,7 @@ function handleKeydown(event) {
                         if (lineNo == 1)
                             return;
                         const lineAfterEdit = editor.getLineByNumber(lineNo);
-                        if (lineAfterEdit !== null && lineAfterEdit.innerText.trim().length == 0) {
+                        if (lineAfterEdit !== null && lineAfterEdit.textContent.trim().length == 0) {
                             lineAfterEdit.remove();
                         }
                     });
@@ -379,7 +382,7 @@ function handleKeydown(event) {
                 }
             } else {
                 // Delete whole line if line is empty
-                if (that.innerText.length == 0 ){
+                if (that.textContent.length == 0 ){
                     const next = editor.removeLine(lineNo);
                     if (next !== null)
                         SetCaretPosition(next,editor.caretPos);
@@ -418,7 +421,7 @@ function handlePaste(event) {
     const sel = window.getSelection()
     const range = sel.getRangeAt(0)
     if (sel.type === 'Caret')
-        range.insertNode(document.createTextNode(text));
+        document.execCommand("insertText", false, text);
     else if (sel.type === 'Range') {
         range.deleteContents();
         range.insertNode(document.createTextNode(text));
@@ -433,13 +436,13 @@ function handlePaste(event) {
     let currentLine = parseInt(that.dataset.lineNumber);
     for (let i=1; i<lines.length; i++){
        const newLine = editor.addNewLineAfter(currentLine++);
-       newLine.innerText = lines[i];
+       newLine.textContent = lines[i];
        newLine.dataset.level = indentLevel;
        newLine.style.textIndent = (indentLevel * indentAmount ) + 'px';
        lastLine = newLine;
     }
     editor.selectedLines = [lastLine];
-    SetCaretPosition(lastLine,lastLine.innerText.length);
+    SetCaretPosition(lastLine,lastLine.textContent.length);
 }
 
 window.addEventListener("load", function(){
