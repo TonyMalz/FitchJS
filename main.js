@@ -236,7 +236,7 @@ function handleKeyup(event) {
             
             if ((key == 'Tab' || key == 'Enter')) {
                 console.log('set');
-                //XXX FIXME
+                //XXX FIXME insert suggestion
                 const suggestion = results[selectionIndex].replace(/<\/?[^>]+(>|$)/g, "")[0];
                 that.textContent = that.textContent.slice(0,currentToken.pos) +  suggestion + that.textContent.slice( currentToken.pos + searchString.length);
                 tooltipElem.remove();
@@ -424,12 +424,19 @@ function handlePaste(event) {
         document.execCommand("insertText", false, text);
     else if (sel.type === 'Range') {
         range.deleteContents();
-        range.insertNode(document.createTextNode(text));
+        if (range.commonAncestorContainer.nodeType != 3){
+            // we have a selection over multiple lines
+            // append content on first line
+            that.textContent += text;
+        } else {
+            range.insertNode(document.createTextNode(text));
+        }
     }
     range.collapse()
     if (lines.length == 1) {
         that.contentEditable = 'true';
         that.focus();
+        editor.selectedLines = [that]
         return
     }
     let lastLine = that;
