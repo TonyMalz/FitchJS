@@ -110,8 +110,7 @@ function handleMouse(event) {
     }
 }
 
-// XXX FIXME: use tokenizer!!
-let suggestions = ['∧ And','∨ Or','∀ For All','¬ Not','⊥ Bottom','→ Implication','↔ Bi-Implication','∃ Exists'];
+const suggestions = ['∧ And','∨ Or','∀ For All','¬ Not','⊥ Bottom','→ Implication','↔ Bi-Implication','∃ Exists'];
 //suggestions.sort( (a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 function suggest(search) {
     // escape brackets
@@ -125,6 +124,34 @@ function suggest(search) {
         if (regex.test(term))
             results.push(term.replace(regex,'<b>$1</b>'))
     });
+    console.log(results)
+    return results;
+}
+
+const sugg = new Map();
+sugg.set("∧ And", '∧');
+sugg.set("v Or", '∨');
+sugg.set("¬ Not", '¬');
+sugg.set("∀ For All", '∀');
+sugg.set("-> Implication", '→');
+sugg.set("<-> Bi-Implication", '↔');
+sugg.set("∃ Exists", '∃');
+sugg.set("⊥ Bottom", '⊥');
+sugg.set("⊥ False", '⊥');
+
+
+function suggest2(search) {
+     // escape brackets
+    search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // enclose search term in brackets
+    const regex = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+    console.log(search,regex)
+
+    const results = new Map();
+    for (const [matchstring,token] of sugg){
+        if (regex.test(matchstring))
+            results.set(token,[matchstring,matchstring.replace(regex,'<b>$1</b>')]);
+    }
     console.log(results)
     return results;
 }
@@ -198,22 +225,24 @@ function handleKeyup(event) {
         //search from beginnig of current token until caret position
         let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
         if (searchString.length != 0){
-            let results = suggest(searchString);
-            if (results.length == 0)
+            let results = suggest2(searchString);
+            if (results.size == 0)
                 return;
             if (selectionIndex < 0) {
                 selectionIndex = 0;
-            } else if (selectionIndex >= results.length) {
-                selectionIndex = results.length-1;
+            } else if (selectionIndex >= results.size) {
+                selectionIndex = results.size-1;
             }
             console.log('sel index', selectionIndex);
 
-            let tooltipHtml = '<ul>'; 
+            let tooltipHtml = '<ul>';
+            results = Array.from(results) 
             for (let i in results) {
+                const description = results[i][1][1];
                 if (selectionIndex == i)
-                    tooltipHtml += `<li class='tooltipHighlight'>${results[i]}`;
+                    tooltipHtml += `<li class='tooltipHighlight'>${description}`;
                 else
-                    tooltipHtml += `<li>${results[i]}`;
+                    tooltipHtml += `<li>${description}`;
             }
             tooltipHtml += '</ul>';
             tooltipElem = document.createElement('div');
@@ -237,7 +266,7 @@ function handleKeyup(event) {
             if ((key == 'Tab' || key == 'Enter')) {
                 console.log('set');
                 //XXX FIXME insert suggestion
-                const suggestion = results[selectionIndex].replace(/<\/?[^>]+(>|$)/g, "")[0];
+                const suggestion = results[selectionIndex][0]; // logic symbol
                 that.textContent = that.textContent.slice(0,currentToken.pos) +  suggestion + that.textContent.slice( currentToken.pos + searchString.length);
                 tooltipElem.remove();
                 tooltipElem = null;
@@ -256,6 +285,25 @@ function handleKeyup(event) {
     
 }
 // XXX
+
+function parseLineDiv(div) {
+    const text = div.textContent.trim();
+
+    if ( text != '' && div.dataset.lineNumber){
+          console.log('check line')
+          const parsedFormula = new Parser(new Scanner(text,div.dataset.lineNumber).scanTokens()).parse();
+          if (parsedFormula) {
+              console.log(parsedFormula)
+              div.classList.add('lineOk'); //='#4CAF50 -9px 0px 0px 0px';
+              div.classList.remove('lineError');
+          } else {
+              div.classList.add('lineError');
+              div.classList.remove('lineOk');//='#E91E63 -9px 0px 0px 0px';
+
+              console.log('no valid formula in line', div.dataset.lineNumber)
+          }
+    }
+}
 
 const indentAmount = '50';
 function handleKeydown(event) {
@@ -288,6 +336,7 @@ function handleKeydown(event) {
           if (lineNo < editor.numberOfLines) {
             const next = document.getElementById('l'+(lineNo + 1));
             editor.selectedLines = [next];
+            parseLineDiv(that);
             SetCaretPosition(next,editor.caretPos);
           }
           break;
@@ -299,6 +348,7 @@ function handleKeydown(event) {
           if (lineNo > 1) {
             const next = document.getElementById('l'+(lineNo - 1));
             editor.selectedLines = [next];
+            parseLineDiv(that);
             SetCaretPosition(next,editor.caretPos);
           }
           break;
@@ -312,6 +362,7 @@ function handleKeydown(event) {
           next.dataset.level = that.dataset.level;
           editor.selectedLines = [next];
           SetCaretPosition(next,editor.caretPos);
+          parseLineDiv(that);
           enterProcessed = true;
           break;
         case "Tab":

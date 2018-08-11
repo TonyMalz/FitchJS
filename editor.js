@@ -76,7 +76,7 @@ class Editor {
 		return document.getElementById('l'+lineNumber);
 	}
 	getLineTemplate(lineNumber){
-		return `<div data-line-number=${lineNumber} data-level=0 id="l${lineNumber}" class="line" spellcheck="false">Line ${lineNumber}</div>`
+		return `<div data-line-number=${lineNumber} data-level=0 id="l${lineNumber}" class="line" spellcheck="false"></div>`
 	}
 	
 }

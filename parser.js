@@ -339,7 +339,7 @@ class Parser {
             this.checkIsAtEOF();
             return form;
         } catch (error) {
-            console.error(error);
+            //console.error(error);
             return null;
         }
     }
