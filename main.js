@@ -80,7 +80,7 @@ function handleMouse(event) {
         case 'mouseup':
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
                 // only update if a line was selected
-                if (that.className === 'line' || that.parentNode.className === 'line'){
+                if (that.classList.contains('line') || that.parentNode.classList.contains('line')){
                     that.contentEditable = 'true';
                     that.focus();
                     editor.selectedLines = [that];
@@ -110,24 +110,6 @@ function handleMouse(event) {
     }
 }
 
-const suggestions = ['∧ And','∨ Or','∀ For All','¬ Not','⊥ Bottom','→ Implication','↔ Bi-Implication','∃ Exists'];
-//suggestions.sort( (a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-function suggest(search) {
-    // escape brackets
-    search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    // enclose search term in brackets
-    const regex = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
-    console.log(search,regex)
-
-    let results = [];
-    suggestions.filter( term => {
-        if (regex.test(term))
-            results.push(term.replace(regex,'<b>$1</b>'))
-    });
-    console.log(results)
-    return results;
-}
-
 const sugg = new Map();
 sugg.set("∧ And", '∧');
 sugg.set("v Or", '∨');
@@ -138,9 +120,7 @@ sugg.set("<-> Bi-Implication", '↔');
 sugg.set("∃ Exists", '∃');
 sugg.set("⊥ Bottom", '⊥');
 sugg.set("⊥ False", '⊥');
-
-
-function suggest2(search) {
+function suggest(search) {
      // escape brackets
     search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     // enclose search term in brackets
@@ -225,7 +205,7 @@ function handleKeyup(event) {
         //search from beginnig of current token until caret position
         let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
         if (searchString.length != 0){
-            let results = suggest2(searchString);
+            let results = suggest(searchString);
             if (results.size == 0)
                 return;
             if (selectionIndex < 0) {
@@ -280,11 +260,7 @@ function handleKeyup(event) {
         }
     }
     // end autocompletion
-
-    
-    
 }
-// XXX
 
 function parseLineDiv(div) {
     const text = div.textContent.trim();
@@ -307,6 +283,7 @@ function parseLineDiv(div) {
 
 const indentAmount = '50';
 function handleKeydown(event) {
+    console.log('keydown')
     enterProcessed = false;
     tabProcessed = false;
     const that = event.target;
@@ -315,6 +292,7 @@ function handleKeydown(event) {
     }
     const lineNo = parseInt(that.dataset.lineNumber);
     lineKeydown = lineNo;
+    const caretPos = getCaretPosition();
     switch (event.key) {
         case "d":
         //delete current line
@@ -324,6 +302,26 @@ function handleKeydown(event) {
             const next = editor.removeLine(lineNo);
             if (next !== null)
                 SetCaretPosition(next,editor.caretPos);
+          } else {
+            return;
+          }
+          break;
+        case "ArrowLeft":
+          console.log('left',lineNo);
+          if (lineNo > 1 && caretPos === 0) {
+            const next = document.getElementById('l'+(lineNo -1));
+            editor.selectedLines = [next];
+            SetCaretPosition(next,next.textContent.length);
+          } else {
+            return;
+          }
+          break;
+        case "ArrowRight":
+          console.log('right',lineNo);
+          if (lineNo < editor.numberOfLines && caretPos === that.textContent.length) {
+            const next = document.getElementById('l'+(lineNo +1));
+            editor.selectedLines = [next];
+            SetCaretPosition(next,0);
           } else {
             return;
           }
@@ -446,6 +444,16 @@ function handleKeydown(event) {
           }
           break;
         default:
+            const sel = window.getSelection();
+            if (sel.type === 'None')
+                return;
+            const range = sel.getRangeAt(0);
+            if (sel.type === 'Range') {
+                if(editor.selectedLines !== null && editor.selectedLines.length == 1){
+                    range.deleteContents();
+                    SetCaretPosition(editor.selectedLines[0],range.startOffset);
+                } 
+            }
           return; // Quit when this doesn't handle the key event.
     }
 
