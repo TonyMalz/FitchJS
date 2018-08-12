@@ -444,6 +444,9 @@ function handleKeydown(event) {
           }
           break;
         default:
+            if (event.ctrlKey || event.shiftKey)
+                return;
+            
             const sel = window.getSelection();
             if (sel.type === 'None')
                 return;
