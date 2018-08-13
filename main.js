@@ -358,8 +358,12 @@ function handleKeydown(event) {
           const next = editor.addNewLineAfter(lineNo);
           next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
           next.dataset.level = that.dataset.level;
+          //split content
+          const textLeft = that.textContent.slice(caretPos);
+          that.textContent = that.textContent.slice(0,caretPos);
+          next.textContent = textLeft;
           editor.selectedLines = [next];
-          SetCaretPosition(next,editor.caretPos);
+          SetCaretPosition(next,0);
           parseLineDiv(that);
           enterProcessed = true;
           break;
@@ -433,10 +437,23 @@ function handleKeydown(event) {
                 // Delete whole line if line is empty
                 if (that.textContent.length == 0 ){
                     const next = editor.removeLine(lineNo);
-                    if (next !== null)
+                    if (next !== null){
                         SetCaretPosition(next,editor.caretPos);
+                        editor.selectedLines = [next];
+                    }
                 }
                 else {
+                    if (event.key == 'Backspace' && caretPos == 0 && lineNo > 0) {
+                        const text = that.textContent;
+                        editor.removeLine(lineNo);
+                        const next = document.getElementById('l'+(lineNo - 1));
+                        const cursorPos = next.textContent.length;
+                        next.textContent += text;
+                        editor.selectedLines = [next];
+                        SetCaretPosition(next, cursorPos);
+                        // event handled, don't delete any character on next line!
+                        break;
+                    }
                     // propagate event further up
                     return;
                 }
@@ -452,6 +469,7 @@ function handleKeydown(event) {
                 return;
             const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
+                // if a range was selected and any character was typed
                 if(editor.selectedLines !== null && editor.selectedLines.length == 1){
                     range.deleteContents();
                     SetCaretPosition(editor.selectedLines[0],range.startOffset);
