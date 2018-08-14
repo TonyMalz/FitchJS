@@ -342,7 +342,7 @@ function handleKeydown(event) {
           if (tooltipElem){
             break;
           }
-          console.log('up');
+          console.log('up', lineNo);
           if (lineNo > 1) {
             const next = document.getElementById('l'+(lineNo - 1));
             editor.selectedLines = [next];

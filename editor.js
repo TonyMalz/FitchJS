@@ -61,7 +61,7 @@ class Editor {
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
-		// return next line
+		// return next line 
 		return this.getLineByNumber(lineNumber);
 	}
 	updateLineNumbers(){
