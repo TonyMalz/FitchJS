@@ -1,6 +1,6 @@
 const TokenType = Object.freeze({
     // Single-character tokens.
-    LEFT_PAREN:0, RIGHT_PAREN:1, COMMA:2, MINUS:3, PLUS:4, SEMICOLON:5, SLASH:6, STAR:7,
+    LEFT_PAREN:0, RIGHT_PAREN:1, COMMA:2, MINUS:3, PLUS:4, SEMICOLON:5, SLASH:6, STAR:7, DOT:25, COLON:26,
 
     // One or two character tokens.
     EQUAL:8, GREATER:9, GREATER_EQUAL:10, LESS:11, LESS_EQUAL:12,
@@ -116,6 +116,12 @@ class Scanner {
                 break;
             case ';' :
                 this.addToken(TokenType.SEMICOLON);
+                break;
+            case ':' :
+                this.addToken(TokenType.COLON);
+                break;    
+            case '.' :
+                this.addToken(TokenType.DOT);
                 break;
             case '*' :
                 this.addToken(TokenType.STAR);

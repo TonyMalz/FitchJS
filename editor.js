@@ -29,7 +29,8 @@ class Editor {
 		// get line template
 		const lineHtml = this.getLineTemplate(newLineNumber);
 		// insert new line
-		this.getLineByNumber(lineNumber).insertAdjacentHTML('afterend', lineHtml);
+		//this.getLineByNumber(lineNumber).insertAdjacentHTML('afterend', lineHtml);
+		this.getLineByNumber(lineNumber).parentNode.insertAdjacentHTML('afterend', lineHtml);
 
 		this.numberOfLines++;
 		return this.getLineByNumber(newLineNumber);
@@ -53,7 +54,7 @@ class Editor {
 			return line;
 		}
 		
-		line.remove();
+		line.parentNode.remove();
 
 		// check and update line numbers
 		this.updateLineNumbers();
@@ -69,14 +70,22 @@ class Editor {
         for (let i=0; i<lines.length; i++){
             lines[i].dataset.lineNumber = i+1 ;
             lines[i].id = 'l' + (i+1);
+            if (lines[i].nextElementSibling){
+            	lines[i].nextElementSibling.dataset.lineNumber = i+1 ;
+            	lines[i].nextElementSibling.id = 'r' + (i+1);
+            }
         }
+        
         this.numberOfLines = lines.length;
 	}
 	getLineByNumber(lineNumber){
 		return document.getElementById('l'+lineNumber);
 	}
 	getLineTemplate(lineNumber){
-		return `<div data-line-number=${lineNumber} data-level=0 id="l${lineNumber}" class="line" spellcheck="false"></div>`
+		return `<div class="row">
+				<div data-line-number=${lineNumber} data-level=0 id="l${lineNumber}" class="line" spellcheck="false"></div>
+		        <div class="rule" contenteditable="true" data-line-number=${lineNumber} id="r${lineNumber}"  placeholder="add rule" spellcheck="false"></div>
+		        </div>`
 	}
 	
 }

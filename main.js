@@ -54,7 +54,9 @@ function getCaretPosition() {
 function showCaretPos(event) {
   let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
-  editor.caretPos = getCaretPosition();
+  //editor.caretPos = getCaretPosition();
+  if (!editor.selectedLines)
+    return;
   const line = editor.selectedLines[0].dataset.lineNumber;
   caretPosEl.textContent = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
 }
@@ -92,7 +94,7 @@ function handleMouse(event) {
                         console.log(editor.caretPos)
                     }
                     activeLine = that;
-                }
+                } 
             }
             const sel = window.getSelection()
             if (sel.type === 'Range') {
@@ -119,7 +121,26 @@ sugg.set("-> Implication", '→');
 sugg.set("<-> Bi-Implication", '↔');
 sugg.set("∃ Exists", '∃');
 sugg.set("⊥ Bottom", '⊥');
-sugg.set("⊥ False", '⊥');
+
+const suggestrules = new Map();
+suggestrules.set("∧ And Intro", '∧ Intro:');
+suggestrules.set("∧ And Elim", '∧ Elim:');
+suggestrules.set("v Or Intro", '∨ Intro:');
+suggestrules.set("v Or Elim", '∨ Elim:');
+suggestrules.set("¬ Not Intro", '¬ Intro:');
+suggestrules.set("¬ Not Elim", '¬ Elim:');
+suggestrules.set("∀ For All Intro", '∀ Intro:');
+suggestrules.set("∀ For All Elim", '∀ Elim:');
+suggestrules.set("-> Implication Intro", '→ Intro:');
+suggestrules.set("-> Implication Elim", '→ Elim:');
+suggestrules.set("<-> Bi-Implication Intro", '↔ Intro:');
+suggestrules.set("<-> Bi-Implication Elim", '↔ Elim:');
+suggestrules.set("∃ Existential Intro", '∃ Intro:');
+suggestrules.set("∃ Existential Elim", '∃ Elim:');
+suggestrules.set("⊥ Bottom Intro", '⊥ Intro:');
+suggestrules.set("⊥ Bottom Elim", '⊥ Elim:');
+suggestrules.set("= Identity Intro", '= Intro:');
+suggestrules.set("= Identity Elim", '= Elim:');
 function suggest(search) {
      // escape brackets
     search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -135,7 +156,21 @@ function suggest(search) {
     console.log(results)
     return results;
 }
+function suggestRules(search) {
+     // escape brackets
+    search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // enclose search term in brackets
+    const regex = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+    console.log(search,regex)
 
+    const results = new Map();
+    for (const [matchstring,token] of suggestrules){
+        if (regex.test(matchstring))
+            results.set(token,[matchstring,matchstring.replace(regex,'<b>$1</b>')]);
+    }
+    console.log(results)
+    return results;
+}
 
 let currentTokenLeft = 0;
 let tooltipElem;
@@ -144,16 +179,68 @@ let enterProcessed = false;
 let selectionIndex = 0;
 let lineKeydown = 0;
 
-function handleKeyup(event) {
-    showCaretPos(event);
+function handleKeydownRule(event){
+    console.log('rule keydown')
+    const that = event.target;
+    const caretPos = getCaretPosition();
+    switch (event.key) {
+        case ":":
+        case "Enter":
+        case "ArrowUp":
+        case "ArrowDown":
+            break;
+        case "ArrowLeft":
+            if (that.textContent[caretPos-1] == ':'){
+                //do not allow past colon
+            } else {
+                return;
+            }
+            break;
+        case "Backspace":
+            console.log('Backspace')
+            if (that.textContent[caretPos-1] == ':'){
+                //delete whole line if rule will be deleted
+                that.textContent = '';
+                ruleSelected = false;
+            } else {
+                return;
+            }
+            break
+        default: return;
+    }
+    event.preventDefault();
+}
+
+//XXX FIXME on per line basis
+let ruleSelected = false;
+
+function handleKeyupRule(event) {
     const key = event.key;
     const that = event.target;
     const lineNo = parseInt(that.dataset.lineNumber);
 
     // get token under caret position
     let currentToken = null;
-    const tokens = new Scanner(that.textContent,that.dataset.lineNumber).scanTokens();
+    let textval = that.textContent;
     const caretPos = getCaretPosition();
+    const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
+    
+    const ruleLineNumbers = new Set();
+    for (let i=0; i<tokens.length; i++) {
+        if (tokens[i].type == TokenType.NUMBER){
+            ruleLineNumbers.add(tokens[i].literal);
+            // check for number range
+            if(tokens[i+1].type == TokenType.MINUS && tokens[i+2].type == TokenType.NUMBER) {
+                const end = tokens[i+2].literal;
+                if (end > 100)
+                    continue;
+                for(let start = (tokens[i].literal+1); start <= end; start++){
+                    ruleLineNumbers.add(start);
+                }
+                i+=2;
+            }
+        }
+    }
     for (let token of tokens) {
         const tokenEnd = token.pos + token.lexeme.length;
         if (token.pos <= caretPos &&  caretPos <= tokenEnd) {
@@ -167,6 +254,132 @@ function handleKeyup(event) {
         tooltipElem = null;
     }
 
+    //no autocompletion if lines were changed between key presses
+    if (lineNo != lineKeydown) {
+        return;
+    }
+
+
+    let triggerAutocompletion = false;
+    if (key.length == 1 && key != ' ') {
+        triggerAutocompletion = true;
+    } else if (key == 'Enter' || key == 'Tab') {
+        triggerAutocompletion = true;
+    } else if (key == 'Control' || key == 'Shift') {
+        triggerAutocompletion = true;
+    } else if (key == 'ArrowUp') {
+        triggerAutocompletion = true;
+        selectionIndex--;
+    } else if (key == 'ArrowDown') {
+        triggerAutocompletion = true;
+        selectionIndex++;
+    } else {
+        triggerAutocompletion = false;
+        selectionIndex = 0;
+    }
+
+    if (ruleSelected){
+        triggerAutocompletion = false;
+        document.querySelectorAll('.line').forEach(line => {
+            line.classList.remove('selectedLine');
+        });
+        console.log(ruleLineNumbers)
+        for (let number of ruleLineNumbers) {
+            const line = editor.getLineByNumber(number);
+            if (line) {
+                line.classList.add('selectedLine');            
+            }
+        }
+    }
+
+    if (triggerAutocompletion && currentToken && currentToken.type != TokenType.EOF) {
+        //search from beginnig of current token until caret position
+        let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
+        if (searchString.length != 0){
+            let results = suggestRules(searchString);
+            if (results.size == 0)
+                return;
+            if (selectionIndex < 0) {
+                selectionIndex = 0;
+            } else if (selectionIndex >= results.size) {
+                selectionIndex = results.size-1;
+            }
+            console.log('sel index', selectionIndex);
+
+            let tooltipHtml = '<ul>';
+            results = Array.from(results) 
+            for (let i in results) {
+                const description = results[i][1][1];
+                if (selectionIndex == i)
+                    tooltipHtml += `<li data-value='${results[i][0]}' class='tooltipHighlight'>${description}`;
+                else
+                    tooltipHtml += `<li>${description}`;
+            }
+            tooltipHtml += '</ul>';
+            tooltipElem = document.createElement('div');
+            tooltipElem.className = 'tooltipRule';
+            tooltipElem.innerHTML = tooltipHtml;
+            document.body.append(tooltipElem);
+
+            // position it below line
+            const coords = that.getBoundingClientRect();
+            const range = document.createRange();
+            range.setStart(that.childNodes[0],currentToken.pos);
+            currentTokenLeft = range.getBoundingClientRect().left;
+            let left = currentTokenLeft - 10;
+            if (left < 0) left = 0; // don't cross the left window edge
+
+            let top = coords.top + that.offsetHeight;
+            
+            tooltipElem.style.left = left + 'px';
+            tooltipElem.style.top = top + 'px';
+            
+            if ((key == 'Tab' || key == 'Enter')) {
+                const suggestion = results[selectionIndex][0];
+                that.textContent = suggestion;
+                tooltipElem.remove();
+                tooltipElem = null;
+                selectionIndex = 0;
+                ruleSelected = true;
+                SetCaretPosition(that,currentToken.pos + suggestion.length);
+            }
+            if (key == 'Escape') {
+                tooltipElem.remove();
+                tooltipElem = null;
+                currentToken = null;
+            }
+        }
+    }
+}
+
+function handleKeyup(event) {
+    showCaretPos(event);
+    const key = event.key;
+    const that = event.target;
+    if (that.classList.contains('rule')) {
+        handleKeyupRule(event);
+        return;
+    }
+    const lineNo = parseInt(that.dataset.lineNumber);
+
+    // get token under caret position
+    let currentToken = null;
+    let textval = that.textContent;
+    const caretPos = getCaretPosition();
+    const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
+    
+    for (let token of tokens) {
+        const tokenEnd = token.pos + token.lexeme.length;
+        if (token.pos <= caretPos &&  caretPos <= tokenEnd) {
+            currentToken = token;
+            break;
+        }
+    }
+    console.log('currentToken', currentToken)
+    if (tooltipElem) {
+        tooltipElem.remove();
+        tooltipElem = null;
+    }
 
     //no autocompletion if lines were changed between key presses
     if (lineNo != lineKeydown) {
@@ -292,20 +505,12 @@ function handleKeydown(event) {
     }
     const lineNo = parseInt(that.dataset.lineNumber);
     lineKeydown = lineNo;
+    if (that.classList.contains('rule')) {
+        handleKeydownRule(event);
+        return;
+    }
     const caretPos = getCaretPosition();
     switch (event.key) {
-        case "d":
-        //delete current line
-          console.log('d',lineNo,event);
-          if (lineNo > 0 && event.ctrlKey === true ) {
-            console.log('delete line');
-            const next = editor.removeLine(lineNo);
-            if (next !== null)
-                SetCaretPosition(next,editor.caretPos);
-          } else {
-            return;
-          }
-          break;
         case "ArrowLeft":
           console.log('left',lineNo);
           if (lineNo > 1 && caretPos === 0) {
@@ -373,6 +578,14 @@ function handleKeydown(event) {
           }
 
           console.log('Tab');
+          if(caretPos == that.textContent.length){
+            console.log('jump to rule selection')
+            if(that.nextElementSibling) {
+                that.nextElementSibling.focus();
+            }
+            tabProcessed = true;
+            break;
+          }
           let indentLevel = that.dataset.level;
           if (event.shiftKey == true){
             if (indentLevel > 0)
@@ -394,6 +607,7 @@ function handleKeydown(event) {
                         if (indentLevel > 0){
                             that.style.textIndent = (--indentLevel * indentAmount) + 'px';
                             that.dataset.level = indentLevel;
+                            return;
                         }
                     } else {
                         return;
@@ -409,11 +623,17 @@ function handleKeydown(event) {
                 return;
             const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
-                
                 if (editor.selectedLines !== null && editor.selectedLines.length > 1) {
                     console.log(editor.selectedLines)
                     // only delete selection
                     range.deleteContents();
+                    // XXX add deleted rule selection
+                    const firstLineId = editor.selectedLines[0].id;
+                    const firstLineAfterDeletion = document.getElementById(firstLineId);
+                    if (!firstLineAfterDeletion.nextElementSibling){
+                        // if rule selection is missing, add it again
+                        firstLineAfterDeletion.parentNode.append(editor.selectedLines[0].nextElementSibling);
+                    }
                     let removeLines = [];
                     editor.selectedLines.forEach(line => {
                         const lineNo = parseInt(line.dataset.lineNumber);
@@ -421,7 +641,7 @@ function handleKeydown(event) {
                             return;
                         const lineAfterEdit = editor.getLineByNumber(lineNo);
                         if (lineAfterEdit !== null && lineAfterEdit.textContent.trim().length == 0) {
-                            lineAfterEdit.remove();
+                            editor.removeLine(lineNo)
                         }
                     });
                     editor.updateLineNumbers();
@@ -429,6 +649,13 @@ function handleKeydown(event) {
                     SetCaretPosition(startLine,range.startOffset);
                 } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
                     range.deleteContents();
+                    // XXX add deleted rule selection
+                    const firstLineId = editor.selectedLines[0].id;
+                    const firstLineAfterDeletion = document.getElementById(firstLineId);
+                    if (!firstLineAfterDeletion.nextElementSibling){
+                        // if rule selection is missing, add it again
+                        firstLineAfterDeletion.parentNode.append(editor.selectedLines[0].nextElementSibling);
+                    }
                     SetCaretPosition(editor.selectedLines[0],range.startOffset);
                 } else {
                     return;
@@ -460,6 +687,16 @@ function handleKeydown(event) {
             }
           }
           break;
+        case "d":
+        //delete current line
+          console.log('d',lineNo,event);
+          if (lineNo > 0 && event.ctrlKey === true ) {
+            console.log('delete line');
+            const next = editor.removeLine(lineNo);
+            if (next !== null)
+                SetCaretPosition(next,editor.caretPos);
+            break;
+          } // fall through to normal key handling
         default:
             if (event.ctrlKey || event.shiftKey)
                 return;
@@ -540,7 +777,7 @@ window.addEventListener("load", function(){
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
     window.addEventListener('mouseup', handleMouse);
-
+    SetCaretPosition(document.getElementById('l3'),0);
 });
 
     
@@ -552,6 +789,8 @@ window.addEventListener("load", function(){
     // Move caret to a specific point in a DOM element
     function SetCaretPosition(el, pos){
         //console.log('caret', pos, el)
+        if (el.classList.contains('line'))
+            editor.selectedLines = [el];
         if (el === null)
             return -1;
         el.contentEditable = 'true';
