@@ -54,7 +54,7 @@ function getCaretPosition() {
 function showCaretPos(event) {
   let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
-  //editor.caretPos = getCaretPosition();
+  editor.caretPos = getCaretPosition();
   if (!editor.selectedLines)
     return;
   const line = editor.selectedLines[0].dataset.lineNumber;
@@ -73,6 +73,20 @@ function handleMouse(event) {
     }
     switch (event.type) {
         case 'mousedown':
+            if (that.classList.contains('rule')) {
+                //if rule was already selected, start after current rule name
+                if (that.textContent.length > 0){
+                    const indexColon = that.textContent.indexOf(':');
+                    if (indexColon >= 0){
+                        event.preventDefault();
+                        SetCaretPosition(that,indexColon+1);
+                        ruleSelected = true;
+                    }
+                } else {
+                    ruleSelected = false;
+                }
+                break;
+            }
             editor.selectedLines = null;
             mousedown = event;
             if(activeLine !== null){
@@ -80,6 +94,8 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
+            if (that.classList.contains('rule'))
+                return;
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
                 // only update if a line was selected
                 if (that.classList.contains('line') || that.parentNode.classList.contains('line')){
@@ -159,8 +175,10 @@ function suggest(search) {
 function suggestRules(search) {
      // escape brackets
     search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    search = search.trimStart();
+    search = search.replace(/\s+/,' ')
     // enclose search term in brackets
-    const regex = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+    const regex = new RegExp("(" + search + ")", "gi");
     console.log(search,regex)
 
     const results = new Map();
@@ -183,17 +201,49 @@ function handleKeydownRule(event){
     console.log('rule keydown')
     const that = event.target;
     const caretPos = getCaretPosition();
-    switch (event.key) {
+    const key = event.key;
+    const lineNo = parseInt(that.dataset.lineNumber);
+    switch (key) {
         case ":":
         case "Enter":
-        case "ArrowUp":
+            if (tooltipElem){
+                break;
+            }
+            const next = editor.addNewLineAfter(lineNo);
+            next.style.textIndent = (that.previousElementSibling.dataset.level * indentAmount) + 'px';
+            next.dataset.level = that.previousElementSibling.dataset.level;
+            editor.selectedLines = [next];
+            SetCaretPosition(next,0);
+            enterProcessed = true;
+            break;
         case "ArrowDown":
+            if (tooltipElem){
+              break;
+            }
+            if (lineNo < editor.numberOfLines) {
+                const next = document.getElementById('l'+(lineNo + 1));
+                editor.selectedLines = [next];
+                SetCaretPosition(next,editor.caretPos);
+            }
+            break;
+        case "ArrowUp":
+            if (tooltipElem){
+                break;
+            }
+            if (lineNo > 1) {
+                const next = document.getElementById('l'+(lineNo - 1));
+                editor.selectedLines = [next];
+                SetCaretPosition(next,editor.caretPos);
+            }
             break;
         case "ArrowLeft":
             if (that.textContent[caretPos-1] == ':'){
                 //do not allow past colon
+            } else if (that.textContent.trim() == '') {
+                // go back to end of line
+                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
             } else {
-                return;
+                return
             }
             break;
         case "Backspace":
@@ -206,7 +256,23 @@ function handleKeydownRule(event){
                 return;
             }
             break
-        default: return;
+        case "Tab":
+            if(tooltipElem){
+                break;
+            }
+            if(event.shiftKey){
+                 // go back to end of line
+                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
+            }
+            break;
+        default:
+            if (ruleSelected) {
+                //only allow line numbers and comma and minus after rule was selected
+                if(key >= '0' && key <='9' || key == ',' || key == '-' || key == 'ArrowRight' || key == 'Delete' )
+                    return
+                break
+            }
+            return;
     }
     event.preventDefault();
 }
@@ -221,7 +287,6 @@ function handleKeyupRule(event) {
 
     // get token under caret position
     let currentToken = null;
-    let textval = that.textContent;
     const caretPos = getCaretPosition();
     const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
     
@@ -261,7 +326,7 @@ function handleKeyupRule(event) {
 
 
     let triggerAutocompletion = false;
-    if (key.length == 1 && key != ' ') {
+    if (key.length == 1 ) {
         triggerAutocompletion = true;
     } else if (key == 'Enter' || key == 'Tab') {
         triggerAutocompletion = true;
@@ -292,9 +357,11 @@ function handleKeyupRule(event) {
         }
     }
 
-    if (triggerAutocompletion && currentToken && currentToken.type != TokenType.EOF) {
+    if (triggerAutocompletion) {
         //search from beginnig of current token until caret position
-        let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
+        // let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
+        let searchString = that.textContent;
+        console.log('search', searchString)
         if (searchString.length != 0){
             let results = suggestRules(searchString);
             if (results.size == 0)
@@ -509,13 +576,13 @@ function handleKeydown(event) {
         handleKeydownRule(event);
         return;
     }
-    const caretPos = getCaretPosition();
+    //const caretPos = getCaretPosition();
+    const caretPos = editor.caretPos;
     switch (event.key) {
         case "ArrowLeft":
           console.log('left',lineNo);
           if (lineNo > 1 && caretPos === 0) {
             const next = document.getElementById('l'+(lineNo -1));
-            editor.selectedLines = [next];
             SetCaretPosition(next,next.textContent.length);
           } else {
             return;
@@ -525,7 +592,6 @@ function handleKeydown(event) {
           console.log('right',lineNo);
           if (lineNo < editor.numberOfLines && caretPos === that.textContent.length) {
             const next = document.getElementById('l'+(lineNo +1));
-            editor.selectedLines = [next];
             SetCaretPosition(next,0);
           } else {
             return;
@@ -538,7 +604,6 @@ function handleKeydown(event) {
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
             const next = document.getElementById('l'+(lineNo + 1));
-            editor.selectedLines = [next];
             parseLineDiv(that);
             SetCaretPosition(next,editor.caretPos);
           }
@@ -550,7 +615,6 @@ function handleKeydown(event) {
           console.log('up', lineNo);
           if (lineNo > 1) {
             const next = document.getElementById('l'+(lineNo - 1));
-            editor.selectedLines = [next];
             parseLineDiv(that);
             SetCaretPosition(next,editor.caretPos);
           }
@@ -567,7 +631,6 @@ function handleKeydown(event) {
           const textLeft = that.textContent.slice(caretPos);
           that.textContent = that.textContent.slice(0,caretPos);
           next.textContent = textLeft;
-          editor.selectedLines = [next];
           SetCaretPosition(next,0);
           parseLineDiv(that);
           enterProcessed = true;
@@ -578,9 +641,11 @@ function handleKeydown(event) {
           }
 
           console.log('Tab');
-          if(caretPos == that.textContent.length){
+          //rule selection
+          if(that.textContent.trim().length > 0 && caretPos == that.textContent.length){
             console.log('jump to rule selection')
             if(that.nextElementSibling) {
+                that.textContent = that.textContent.trim();
                 that.nextElementSibling.focus();
             }
             tabProcessed = true;
@@ -630,7 +695,7 @@ function handleKeydown(event) {
                     // XXX add deleted rule selection
                     const firstLineId = editor.selectedLines[0].id;
                     const firstLineAfterDeletion = document.getElementById(firstLineId);
-                    if (!firstLineAfterDeletion.nextElementSibling){
+                    if (!firstLineAfterDeletion.nextElementSibling && editor.selectedLines[0].nextElementSibling){
                         // if rule selection is missing, add it again
                         firstLineAfterDeletion.parentNode.append(editor.selectedLines[0].nextElementSibling);
                     }
@@ -666,7 +731,6 @@ function handleKeydown(event) {
                     const next = editor.removeLine(lineNo);
                     if (next !== null){
                         SetCaretPosition(next,editor.caretPos);
-                        editor.selectedLines = [next];
                     }
                 }
                 else {
@@ -676,7 +740,6 @@ function handleKeydown(event) {
                         const next = document.getElementById('l'+(lineNo - 1));
                         const cursorPos = next.textContent.length;
                         next.textContent += text;
-                        editor.selectedLines = [next];
                         SetCaretPosition(next, cursorPos);
                         // event handled, don't delete any character on next line!
                         break;
@@ -765,8 +828,41 @@ function handlePaste(event) {
        newLine.style.textIndent = (indentLevel * indentAmount ) + 'px';
        lastLine = newLine;
     }
-    editor.selectedLines = [lastLine];
     SetCaretPosition(lastLine,lastLine.textContent.length);
+}
+
+function handleBlur(event) {
+    console.log('focusout')
+    const that = event.target;
+    if (that.classList.contains('rule')){
+        //clean up
+        document.querySelectorAll('.line').forEach(line => {
+            line.classList.remove('selectedLine');
+        });
+        //remove whitespace
+        if(that.textContent.trim() == ''){
+            that.textContent='';
+        }
+    }
+
+}
+
+function handleFocus(event) {
+    console.log('focusin')
+    const that = event.target;
+    if (that.classList.contains('rule')) {
+        //if rule was already selected, start at end
+        if (that.textContent.length > 0){
+            const indexColon = that.textContent.indexOf(':');
+            if (indexColon >= 0){
+                event.preventDefault();
+                SetCaretPosition(that,that.textContent.length);
+                ruleSelected = true;
+            }
+        } else {
+            ruleSelected = false;
+        }
+    }
 }
 
 window.addEventListener("load", function(){
@@ -774,6 +870,8 @@ window.addEventListener("load", function(){
     ed.addEventListener('keyup', handleKeyup);
     ed.addEventListener('paste', handlePaste);
     document.addEventListener("keydown", handleKeydown);
+    ed.addEventListener("focusout", handleBlur);
+    ed.addEventListener("focusin", handleFocus);
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
     window.addEventListener('mouseup', handleMouse);
@@ -789,16 +887,17 @@ window.addEventListener("load", function(){
     // Move caret to a specific point in a DOM element
     function SetCaretPosition(el, pos){
         //console.log('caret', pos, el)
-        if (el.classList.contains('line'))
-            editor.selectedLines = [el];
-        if (el === null)
+        if (!el)
             return -1;
-        el.contentEditable = 'true';
-        if(activeLine !== null && activeLine != el){
-                activeLine.contentEditable = 'false';
+        if (el.classList.contains('line')){
+            editor.selectedLines = [el];
+            el.contentEditable = 'true';
+            if(activeLine && activeLine != el){
+                    activeLine.contentEditable = 'false';
+            }
+            activeLine = el;
         }
-        activeLine = el;
-
+        
         if (el.childNodes.length == 0) {
             el.appendChild(document.createTextNode(''));           
         }

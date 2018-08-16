@@ -46,7 +46,7 @@ aside {
 .row {
     display: grid;
     grid-gap: 25px;
-    grid-template-columns: auto minmax(min-content, max-content) 20%;
+    grid-template-columns: minmax(350px,auto) minmax(100px, 200px) auto;
     grid-template-rows: max-content;
     grid-template-areas: "line rule . ";
 }
@@ -130,6 +130,12 @@ aside {
     content: attr(placeholder);
     display: block;
 }
+.rule:empty:focus:before {
+    content: attr(placeholder);
+    display: block;
+    color: rgba(222, 184, 135, 0.15);
+}
+
 
 .tooltip {
     position: absolute;
