@@ -252,6 +252,9 @@ function handleKeydownRule(event){
                 //delete whole line if rule will be deleted
                 that.textContent = '';
                 ruleSelected = false;
+            } else if (that.textContent.trim() == '') {
+                // go back to end of line
+                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
             } else {
                 return;
             }
@@ -627,6 +630,7 @@ function handleKeydown(event) {
           const next = editor.addNewLineAfter(lineNo);
           next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
           next.dataset.level = that.dataset.level;
+          next.style.zIndex = parseInt(100 - next.dataset.level);
           //split content
           const textLeft = that.textContent.slice(caretPos);
           that.textContent = that.textContent.slice(0,caretPos);
@@ -654,11 +658,22 @@ function handleKeydown(event) {
           let indentLevel = that.dataset.level;
           if (event.shiftKey == true){
             if (indentLevel > 0)
+                //close subproof
                 that.style.textIndent = (--indentLevel * indentAmount) + 'px';
+                that.style.backgroundPositionX = that.style.textIndent;
           } else {
+                //open subproof
+                const levelPrevLine = (lineNo > 1) ? editor.getLineByNumber(lineNo-1).dataset.level : 0;
+                if (levelPrevLine < indentLevel) {
+                    //do nothing since only one subproof level is allowed
+                    tabProcessed = true;
+                    break;
+                }
                 that.style.textIndent = (++indentLevel * indentAmount) + 'px';
+                that.style.backgroundPositionX = that.style.textIndent;
           }
           that.dataset.level = indentLevel;
+          that.style.zIndex = parseInt(100 - that.dataset.level);
           tabProcessed = true;
           break;
         case "Backspace":
@@ -672,6 +687,7 @@ function handleKeydown(event) {
                         if (indentLevel > 0){
                             that.style.textIndent = (--indentLevel * indentAmount) + 'px';
                             that.dataset.level = indentLevel;
+                            that.style.zIndex = parseInt(100 - that.dataset.level);
                             return;
                         }
                     } else {

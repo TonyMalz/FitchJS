@@ -7,31 +7,19 @@
 </head>
 <body>
     <div id='container'>
-       <!--  <main id="editor">
-            <div data-line-number=1 data-level=0 data-is-premise=true id="l1" class="line lineOk" spellcheck="false">Leo <div data-line-number=1 class="rule">add rule</div></div>
-            <div data-line-number=2 data-level=0 data-is-premise=true id="l2" class="line lineOk" spellcheck="false">Peter <div data-line-number=1 class="rule">add rule</div></div>
-            <div data-line-number=3 data-level=0 data-is-premise=true id="l3" class="line lineError" spellcheck="false">∃x(P(x, t) → A(x, ,t)) <div data-line-number=1 class="rule">add rule</div></div>
-        </main> -->
-        <!-- <main id="editor">
-            <div data-line-number=1 data-level=0 data-is-premise=true id="l1" class="line lineOk" spellcheck="false">Leo </div>
-            <div data-line-number=2 data-level=0 data-is-premise=true id="l2" class="line lineOk" spellcheck="false">Peter </div>
-            <div data-line-number=3 data-level=0 data-is-premise=true id="l3" class="line lineError" spellcheck="false">∃x(P(x, t) → A(x, ,t)) </div>
-        </main> -->
         <main id="editor">
             <div class="row" >
-                <div data-line-number=1 data-premise data-level=0 id="l1" class="line lineOk" spellcheck="false">Leo</div>
+                <div data-line-number=01 data-level=0 id="l1" class="line lineOk premise" spellcheck="false">Leo</div>
             </div>
             <div class="row" >
-                <div data-line-number=2 data-premise data-level=0 id="l2" class="line lineOk" spellcheck="false">Peter</div>
-                
+                <div data-line-number=02 data-level=0 id="l2" class="line lineOk premise fitchLine" spellcheck="false">Peter</div>
             </div>
             <div class="row">
-                <div data-line-number=3 data-level=0 id="l3" class="line lineError wavy" spellcheck="false">Peter ∧ Leo</div>
+                <div data-line-number=03 data-level=0 id="l3" class="line lineError wavy" spellcheck="false">Peter ∧ Leo</div>
                 <div class="rule" data-line-number=3 id="r3"  placeholder="add rule" contenteditable="true" spellcheck="false"></div>
             </div>
         </main>
         <aside>
-            Hallo Test
             <div id="caretPos"></div>
             <button onclick="setCursor()">set cursor</button>
             <div class="codeoutput">

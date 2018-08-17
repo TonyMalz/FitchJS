@@ -14,8 +14,10 @@ main
     font-family: "Consolas";
     font-size: 1.3em;
     color: rgba(113, 182, 255, 1);
-    margin : 20px;
+    margin: 20px;
     outline: 0;
+    overflow: hidden;
+    position: relative;
 }
 
 [contenteditable=true] {
@@ -28,6 +30,7 @@ main
 #container {
     display: grid;
     grid-template-areas: "a" "b";
+    grid-template-rows: min-content;
     height: 100%;
 }
 
@@ -54,24 +57,28 @@ aside {
 .line
 {   
     grid-area: line;
-    position: relative; 
+    /*position: relative; */
     width: 100%;
     overflow: hidden;
     margin : 0px;
     padding-bottom: 5px;
-    word-break: break-all;
-    border-bottom: 1px solid #2e2e2e;
-    padding-left: 18px;
+    /*word-break: break-all;*/
+    border-bottom: 1px solid transparent;
+    padding-left: 23px;
     height: 1em;
+    background: #2e2e2e;
 }
 .line::before {
     display: inline-block;
     position: absolute;
     font-size: 0.5em;
     left: 3px;
-    top: 27%;
+    height: 100%;
     color: rgba(113, 182, 255, 0.7);
     content: attr(data-line-number);
+    border-right: 1px solid;
+    padding-right: 3px;
+    padding-top: 7px;
 }
 /*.line::after {
     color: rgba(222, 184, 135, 0.35);
@@ -92,11 +99,15 @@ aside {
 }
 .line:focus
 {   
-    border-bottom: 1px solid green;
+    border-bottom: 1px solid teal;
     background: rgb(65, 65, 65);
 }
 .line:read-write:focus {
      outline: none;
+}
+
+.fitchLine {
+    background: url(line.png) no-repeat 0px 26px;
 }
 
 /*.rule {
@@ -167,7 +178,7 @@ aside {
 .wavy { 
   text-decoration-line: underline;
   text-decoration-style: wavy;
-  text-decoration-color: red;
+  text-decoration-color: rgb(254, 24, 24);
 }
 
 .tooltipRule {

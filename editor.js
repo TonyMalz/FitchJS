@@ -22,7 +22,7 @@ class Editor {
 		if (newLineNumber <= this.numberOfLines) {
 			const lines = document.getElementsByClassName('line');
 	        for (let i=lineNumber; i<lines.length; i++){
-	            lines[i].dataset.lineNumber = i + 2;
+	            lines[i].dataset.lineNumber = this.padLineNumber(i + 2);
 	            lines[i].id = 'l' + (i + 2);
 	        }
 		}
@@ -68,10 +68,10 @@ class Editor {
 	updateLineNumbers(){
 		const lines = document.getElementsByClassName('line');
         for (let i=0; i<lines.length; i++){
-            lines[i].dataset.lineNumber = i+1 ;
+            lines[i].dataset.lineNumber = this.padLineNumber(i+1) ;
             lines[i].id = 'l' + (i+1);
             if (lines[i].nextElementSibling){
-            	lines[i].nextElementSibling.dataset.lineNumber = i+1 ;
+            	lines[i].nextElementSibling.dataset.lineNumber = this.padLineNumber(i+1) ;
             	lines[i].nextElementSibling.id = 'r' + (i+1);
             }
         }
@@ -83,11 +83,13 @@ class Editor {
 	}
 	getLineTemplate(lineNumber){
 		return `<div class="row">
-				<div data-line-number=${lineNumber} data-level=0 id="l${lineNumber}" class="line" spellcheck="false"></div>
+				<div data-line-number=${this.padLineNumber(lineNumber)} data-level=0 id="l${lineNumber}" class="line" spellcheck="false"></div>
 		        <div class="rule" contenteditable="true" data-line-number=${lineNumber} id="r${lineNumber}"  placeholder="add rule" spellcheck="false"></div>
 		        </div>`
 	}
-	
+	padLineNumber(lineNumber){
+		return (lineNumber + '').padStart(2,0);
+	}
 }
 
 
