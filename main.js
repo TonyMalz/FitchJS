@@ -687,6 +687,17 @@ function handleKeydown(event) {
                             that.dataset.level = indentLevel;
                             that.style.zIndex = parseInt(100 - that.dataset.level);
                             return;
+                        } else {
+                           if (lineNo > 0) {
+                                const text = that.textContent;
+                                editor.removeLine(lineNo);
+                                const next = document.getElementById('l'+(lineNo - 1));
+                                const cursorPos = next.textContent.length;
+                                next.textContent += text;
+                                SetCaretPosition(next, cursorPos);
+                                // event handled, don't delete any character on next line!
+                                break;
+                            }
                         }
                     } else {
                         return;
@@ -748,16 +759,6 @@ function handleKeydown(event) {
                     }
                 }
                 else {
-                    if (event.key == 'Backspace' && caretPos == 0 && lineNo > 0) {
-                        const text = that.textContent;
-                        editor.removeLine(lineNo);
-                        const next = document.getElementById('l'+(lineNo - 1));
-                        const cursorPos = next.textContent.length;
-                        next.textContent += text;
-                        SetCaretPosition(next, cursorPos);
-                        // event handled, don't delete any character on next line!
-                        break;
-                    }
                     // propagate event further up
                     return;
                 }

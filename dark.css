@@ -101,7 +101,7 @@ aside {
 .line:focus
 {   
     border-bottom: 1px solid teal;
-    background: rgb(65, 65, 65);
+    background-color: rgb(65, 65, 65) !important;
 }
 .line:read-write:focus {
      outline: none;
@@ -111,20 +111,6 @@ aside {
     background: url(line.png) no-repeat 0px 26px;
 }
 
-/*.rule {
-    grid-area: rule;
-    color: rgba(222, 184, 135, 0.35);
-    font-size: 9px;
-    text-align: center;
-    border: 1px dashed;
-    border-radius: 5px;
-    padding: 2px;
-    width: 50px;
-    float: right;
-    position: absolute;
-    top: 5px;
-    right: 10%;
-}*/
 .rule {
     grid-area: rule;
     color: rgba(222, 184, 135, 0.35);
