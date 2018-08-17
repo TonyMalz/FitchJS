@@ -660,7 +660,6 @@ function handleKeydown(event) {
             if (indentLevel > 0)
                 //close subproof
                 that.style.textIndent = (--indentLevel * indentAmount) + 'px';
-                that.style.backgroundPositionX = that.style.textIndent;
           } else {
                 //open subproof
                 const levelPrevLine = (lineNo > 1) ? editor.getLineByNumber(lineNo-1).dataset.level : 0;
@@ -670,7 +669,6 @@ function handleKeydown(event) {
                     break;
                 }
                 that.style.textIndent = (++indentLevel * indentAmount) + 'px';
-                that.style.backgroundPositionX = that.style.textIndent;
           }
           that.dataset.level = indentLevel;
           that.style.zIndex = parseInt(100 - that.dataset.level);
@@ -861,6 +859,7 @@ function handleBlur(event) {
         }
     }
 
+    
 }
 
 function handleFocus(event) {
@@ -879,6 +878,7 @@ function handleFocus(event) {
             ruleSelected = false;
         }
     }
+    editor.checkFitchLines();
 }
 
 window.addEventListener("load", function(){
@@ -891,6 +891,7 @@ window.addEventListener("load", function(){
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
     window.addEventListener('mouseup', handleMouse);
+    editor.checkFitchLines();
     SetCaretPosition(document.getElementById('l3'),0);
 });
 

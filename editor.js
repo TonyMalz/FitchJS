@@ -90,6 +90,43 @@ class Editor {
 	padLineNumber(lineNumber){
 		return (lineNumber + '').padStart(2,0);
 	}
+	checkFitchLines(){
+		//XXX build tree structure
+		let lastPremise = null;
+		let prevLine = null;
+		document.querySelectorAll('.fitchline').forEach(line => line.classList.remove('fitchline'));
+		for (const line of document.querySelectorAll('.line')) {
+			if (line.classList.contains('premise')){
+				if (line.dataset.level == 0){
+					lastPremise = line;
+					continue;
+				}
+				// remove premise class if line is not in level 0
+				line.classList.remove('premise');
+			}
+			if(!prevLine){
+				
+				if (lastPremise) {
+					if (0 < line.dataset.level){
+						line.classList.add('fitchline');
+						line.style.backgroundPositionX = line.style.textIndent;
+					}
+				}
+				prevLine = line;
+				continue;
+			}
+			const levelPrev = prevLine.dataset.level;
+			if (levelPrev < line.dataset.level){
+				line.classList.add('fitchline');
+				line.style.backgroundPositionX = line.style.textIndent;
+				line.style.backgroundColor = '#2e2e2e';
+			}
+			prevLine = line;
+		}
+		if (lastPremise){
+			lastPremise.classList.add('fitchline');
+		}
+	}
 }
 
 

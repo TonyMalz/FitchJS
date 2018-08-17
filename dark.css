@@ -66,7 +66,8 @@ aside {
     border-bottom: 1px solid transparent;
     padding-left: 23px;
     height: 1em;
-    background: #2e2e2e;
+    background-color: #2e2e2e;
+    z-index: 100;
 }
 .line::before {
     display: inline-block;
@@ -95,7 +96,7 @@ aside {
 }*/
 .line:hover
 {   
-    background: rgb(65, 65, 65);
+    background-color: rgb(65, 65, 65) !important;
 }
 .line:focus
 {   
@@ -106,7 +107,7 @@ aside {
      outline: none;
 }
 
-.fitchLine {
+.fitchline {
     background: url(line.png) no-repeat 0px 26px;
 }
 
@@ -159,7 +160,7 @@ aside {
     color: white;
     background: rgb(65, 65, 65);
     box-shadow: 3px 3px 3px rgba(0, 0, 0, .3);
-    z-index: 99;
+    z-index: 9999;
 }
 .tooltip b {
     background: rgba(0, 255, 174, 0.5);
@@ -193,7 +194,7 @@ aside {
     color: white;
     background: rgb(65, 65, 65);
     box-shadow: 3px 3px 3px rgba(0, 0, 0, .3);
-    z-index: 99;
+    z-index: 9999;
     border: 1px dashed;
     border-radius: 5px;
     border-color: rgba(222, 184, 135, 0.35); 
