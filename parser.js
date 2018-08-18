@@ -778,6 +778,7 @@ class RuleAndIntro extends Rule{
                 console.error(`Did not find ${term} in any source formula`);
                 return false;
             }
+            found = false;
         }
         
         return true;
@@ -1657,4 +1658,8 @@ class Proof {
         })
         return 'subProof'
     }
+}
+let gLineNo = 0;
+function parseLine(text){
+    return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
 }

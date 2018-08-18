@@ -133,6 +133,10 @@ aside {
     display: block;
     color: rgba(222, 184, 135, 0.15);
 }
+.ruleOk {
+    border: 1px solid rgba(76, 175, 80, 0.79);
+    color: #adff2fba;
+}
 
 
 .tooltip {
@@ -202,5 +206,6 @@ aside {
 }
 
 .selectedLine {
-    border: 1px dashed;
+    box-shadow: inset teal 0px 0px 1px 1px;
+    border-radius: 5px;
 }

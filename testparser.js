@@ -1,9 +1,4 @@
 // -- test
-let gLineNo = 0;
-function parseLine(text){
-    return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
-}
-
 function justifyLine(line,rule){
     line.setRule(rule);
     const result = line.check();

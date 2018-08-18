@@ -268,6 +268,15 @@ function handleKeydownRule(event){
                 SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
             }
             break;
+        case "r":
+              if (event.ctrlKey === true ) {
+                    console.log('jump back to line');
+                    if(that.previousElementSibling) {
+                        that.previousElementSibling.focus();
+                    }
+                break;
+              }
+            return;
         default:
             if (ruleSelected) {
                 //only allow line numbers and comma and minus after rule was selected
@@ -352,11 +361,32 @@ function handleKeyupRule(event) {
             line.classList.remove('selectedLine');
         });
         console.log(ruleLineNumbers)
+        let lines = [];
         for (let number of ruleLineNumbers) {
             const line = editor.getLineByNumber(number);
             if (line) {
-                line.classList.add('selectedLine');            
+                line.classList.add('selectedLine');
+                lines.push(new Parser(new Scanner(line.textContent,number).scanTokens()).parse());
             }
+        }
+
+        const indexColon = that.textContent.indexOf(':');
+        const rule = that.textContent.substring(0,indexColon);
+        switch (rule) {
+            case "∧ Intro": {
+                    console.log('AND Intro selected');
+                    //XXX FIXME global gLineNo
+                    const p = new Proof();
+                    const rule = new RuleAndIntro(...lines);
+                    const currentLine = editor.getLineByNumber(lineNo).textContent;
+                    p.addFormula(currentLine,rule);
+                    if (p.check()) {
+                        that.classList.add('ruleOk');
+                    } else {
+                        that.classList.remove('ruleOk');
+                    }
+                }
+                break;
         }
     }
 
@@ -764,6 +794,21 @@ function handleKeydown(event) {
                 }
             }
           }
+          break;
+        case "r":
+            //jump to rule selection
+          console.log('r',lineNo,event);
+          if (that.textContent.trim().length > 0 && event.ctrlKey === true ) {
+                console.log('jump to rule');
+                if(that.nextElementSibling) {
+                    that.textContent = that.textContent.trim();
+                    that.nextElementSibling.focus();
+                }
+
+            break;
+          }
+          if (!event.ctrlKey)
+            return;
           break;
         case "d":
         //delete current line
