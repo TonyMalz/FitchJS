@@ -40,10 +40,10 @@ aside {
     text-align: center;
 }
 .lineOk {
-    box-shadow: #4CAF50 -9px 0px 0px 0px;
+    box-shadow: inset #4CAF50 1px 0px 0px 0px;
 }
 .lineError {
-    box-shadow: #f44336 -9px 0px 0px 0px;
+    box-shadow: inset #f44336 1px 0px 0px 0px;
 }
 
 .row {
@@ -206,6 +206,12 @@ aside {
 }
 
 .selectedLine {
-    box-shadow: inset teal 0px 0px 1px 1px;
-    border-radius: 5px;
+    box-shadow: inset 0px 0px 1px 1px #00f3ff, 2px 1px 4px 3px rgba(10, 10, 0, 0.5);
+}
+
+.fitchline ~ .rule {
+    visibility: hidden;
+}
+.premise ~ .rule {
+    visibility: hidden;
 }

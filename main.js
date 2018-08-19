@@ -376,17 +376,18 @@ function handleKeyupRule(event) {
             case "∧ Intro": {
                     console.log('AND Intro selected');
                     //XXX FIXME global gLineNo
-                    const p = new Proof();
                     const rule = new RuleAndIntro(...lines);
-                    const currentLine = editor.getLineByNumber(lineNo).textContent;
-                    p.addFormula(currentLine,rule);
-                    if (p.check()) {
-                        that.classList.add('ruleOk');
-                    } else {
-                        that.classList.remove('ruleOk');
+                    const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
+                    if (currentLine) {
+                        currentLine.setRule(rule);
+                        if (currentLine.check()) {
+                            that.classList.add('ruleOk');
+                        } else {
+                            that.classList.remove('ruleOk');
+                        }
                     }
                 }
-                break;
+            break;
         }
     }
 
@@ -585,10 +586,11 @@ function parseLineDiv(div) {
               console.log(parsedFormula)
               div.classList.add('lineOk'); //='#4CAF50 -9px 0px 0px 0px';
               div.classList.remove('lineError');
+              return parsedFormula;
           } else {
               div.classList.add('lineError');
               div.classList.remove('lineOk');//='#E91E63 -9px 0px 0px 0px';
-
+              return null;
               console.log('no valid formula in line', div.dataset.lineNumber)
           }
     }
@@ -703,6 +705,7 @@ function handleKeydown(event) {
           that.dataset.level = indentLevel;
           that.style.zIndex = parseInt(100 - that.dataset.level);
           tabProcessed = true;
+          editor.checkFitchLines();
           break;
         case "Backspace":
             {
@@ -712,10 +715,12 @@ function handleKeydown(event) {
                     const range = sel.getRangeAt(0);
                     if (range.startOffset == 0) {
                         let indentLevel = that.dataset.level;
+                        // subproof
                         if (indentLevel > 0){
                             that.style.textIndent = (--indentLevel * indentAmount) + 'px';
                             that.dataset.level = indentLevel;
                             that.style.zIndex = parseInt(100 - that.dataset.level);
+                            editor.checkFitchLines();
                             return;
                         } else {
                            if (lineNo > 0) {
@@ -819,7 +824,10 @@ function handleKeydown(event) {
             if (next !== null)
                 SetCaretPosition(next,editor.caretPos);
             break;
-          } // fall through to normal key handling
+          } 
+          if (!event.ctrlKey)
+            return;
+          break;
         default:
             if (event.ctrlKey || event.shiftKey)
                 return;
@@ -904,8 +912,7 @@ function handleBlur(event) {
             that.textContent='';
         }
     }
-
-    
+    editor.checkFitchLines();
 }
 
 function handleFocus(event) {
@@ -924,7 +931,6 @@ function handleFocus(event) {
             ruleSelected = false;
         }
     }
-    editor.checkFitchLines();
 }
 
 window.addEventListener("load", function(){
@@ -937,6 +943,7 @@ window.addEventListener("load", function(){
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
     window.addEventListener('mouseup', handleMouse);
+    
     editor.checkFitchLines();
     SetCaretPosition(document.getElementById('l3'),0);
 });

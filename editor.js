@@ -115,6 +115,7 @@ class Editor {
 				prevLine = line;
 				continue;
 			}
+			// subproofs
 			const levelPrev = prevLine.dataset.level;
 			if (levelPrev < line.dataset.level){
 				line.classList.add('fitchline');
