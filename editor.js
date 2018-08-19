@@ -71,7 +71,7 @@ class Editor {
             lines[i].dataset.lineNumber = this.padLineNumber(i+1) ;
             lines[i].id = 'l' + (i+1);
             if (lines[i].nextElementSibling){
-            	lines[i].nextElementSibling.dataset.lineNumber = this.padLineNumber(i+1) ;
+            	lines[i].nextElementSibling.dataset.lineNumber = (i+1);
             	lines[i].nextElementSibling.id = 'r' + (i+1);
             }
         }

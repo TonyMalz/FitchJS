@@ -215,3 +215,6 @@ aside {
 .premise ~ .rule {
     visibility: hidden;
 }
+.line:empty ~ .rule {
+    visibility: hidden;
+}

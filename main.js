@@ -157,6 +157,7 @@ suggestrules.set("⊥ Bottom Intro", '⊥ Intro:');
 suggestrules.set("⊥ Bottom Elim", '⊥ Elim:');
 suggestrules.set("= Identity Intro", '= Intro:');
 suggestrules.set("= Identity Elim", '= Elim:');
+suggestrules.set("Reiteration", 'Reit:');
 function suggest(search) {
      // escape brackets
     search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -377,6 +378,20 @@ function handleKeyupRule(event) {
                     console.log('AND Intro selected');
                     //XXX FIXME global gLineNo
                     const rule = new RuleAndIntro(...lines);
+                    const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
+                    if (currentLine) {
+                        currentLine.setRule(rule);
+                        if (currentLine.check()) {
+                            that.classList.add('ruleOk');
+                        } else {
+                            that.classList.remove('ruleOk');
+                        }
+                    }
+                }
+            break;
+            case "Reit": {
+                    console.log('Reit selected');
+                    const rule = new RuleReiteration(lines[0]);
                     const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
                     if (currentLine) {
                         currentLine.setRule(rule);
@@ -641,6 +656,13 @@ function handleKeydown(event) {
             const next = document.getElementById('l'+(lineNo + 1));
             parseLineDiv(that);
             SetCaretPosition(next,editor.caretPos);
+          } else {
+            //add new line if in last line
+            const next = editor.addNewLineAfter(lineNo);
+            next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
+            next.dataset.level = that.dataset.level;
+            next.style.zIndex = parseInt(100 - next.dataset.level);
+            SetCaretPosition(next,0);
           }
           break;
         case "ArrowUp":
@@ -774,7 +796,6 @@ function handleKeydown(event) {
                     SetCaretPosition(startLine,range.startOffset);
                 } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
                     range.deleteContents();
-                    // XXX add deleted rule selection
                     const firstLineId = editor.selectedLines[0].id;
                     const firstLineAfterDeletion = document.getElementById(firstLineId);
                     if (!firstLineAfterDeletion.nextElementSibling){
@@ -787,13 +808,24 @@ function handleKeydown(event) {
                 }
             } else {
                 // Delete whole line if line is empty
-                if (that.textContent.length == 0 ){
+                if (that.textContent.trim().length == 0 ){
                     const next = editor.removeLine(lineNo);
                     if (next !== null){
                         SetCaretPosition(next,editor.caretPos);
                     }
-                }
+                } 
                 else {
+                    // if at end of line, delete next line and append content of that line to current line
+                    if (caretPos == that.textContent.length) {
+                        const next = editor.getLineByNumber(lineNo+1);
+                        if (next){
+                            const text = next.textContent.trim();
+                            editor.removeLine(lineNo+1);
+                            that.textContent += text;
+                            SetCaretPosition(that,caretPos);
+                            break;
+                        }
+                    }
                     // propagate event further up
                     return;
                 }
