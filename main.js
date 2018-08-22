@@ -213,6 +213,7 @@ function handleKeydownRule(event){
             const next = editor.addNewLineAfter(lineNo);
             next.style.textIndent = (that.previousElementSibling.dataset.level * indentAmount) + 'px';
             next.dataset.level = that.previousElementSibling.dataset.level;
+            next.style.zIndex = parseInt(100 - next.dataset.level);
             editor.selectedLines = [next];
             SetCaretPosition(next,0);
             enterProcessed = true;
@@ -288,6 +289,101 @@ function handleKeydownRule(event){
             return;
     }
     event.preventDefault();
+}
+
+function highlightOperator(lineNumber,...matches){
+    const matchOperatorClassName = ' highlightOperatorOk';
+    const matchFormulaClassName = ' highlightFormulaOk';
+
+    const line = editor.getLineByNumber(lineNumber);
+    if (!line) return;
+
+    const formula = parseLineDiv(line);
+    if (!formula) return;
+
+    let matchOperator = null;
+    let matchFormulas = []
+    for (const match of matches){
+        if (typeof match == 'number' ) {
+            matchOperator = match;
+        } else if (match instanceof Formula){
+            matchFormulas.push(match);
+        }
+    }
+
+    // try to highlight corresponding logical connective in current formula
+    if (formula.connective) {
+        // -> / <->
+        const connective = formula.connective;
+        const offset = connective.pos;
+        const length = connective.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        line.innerHTML = `<span class='connectivePart'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+    } else if (formula.connectives) {
+        // and / or
+        let html = '';
+        let content = line.textContent;
+        let i = 0;
+
+        for (const connective of formula.connectives){
+            const offset = connective.pos - i;
+            const length = connective.lexeme.length;
+            const before = content.substring(0,offset);
+            const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+            const beforeFormula = parseText(before);
+            let foundForm = false;
+            if (beforeFormula) {
+                const matchForm = String(beforeFormula);
+                for (const form of matchFormulas){
+                    if (String(form) == matchForm){
+                        foundForm = true;
+                        break;
+                    }
+                }
+            }
+            const formMatch = foundForm ? matchFormulaClassName : '';
+            html += `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span>`;
+            i = offset + length;
+            content = content.substring(i);
+        }
+        const beforeFormula = parseText(content);
+        let foundForm = false;
+        if (beforeFormula) {
+            const matchForm = String(beforeFormula);
+            for (const form of matchFormulas){
+                if (String(form) == matchForm){
+                    foundForm = true;
+                    break;
+                }
+            }
+        }
+        const formMatch = foundForm ? matchFormulaClassName : '';
+        html += `<span class='connectivePart${formMatch}'>${content}</span>`;
+        line.innerHTML = html;
+    } else if (formula.operator) {
+        // not
+        const connective = formula.operator;
+        const offset = connective.pos;
+        const length = connective.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+    } else if (formula.quantifier){
+        // universal / existential
+        const connective = formula.quantifier;
+        const offset = connective.pos;
+        const length = formula.variable.pos + formula.variable.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}${formula.variable}</span><span class='connectivePart'>${after}</span>`;
+    }
 }
 
 //XXX FIXME on per line basis
@@ -376,15 +472,20 @@ function handleKeyupRule(event) {
         switch (rule) {
             case "∧ Intro": {
                     console.log('AND Intro selected');
-                    //XXX FIXME global gLineNo
                     const rule = new RuleAndIntro(...lines);
                     const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
                     if (currentLine) {
+                        highlightOperator(lineNo,TokenType.AND,...lines);
                         currentLine.setRule(rule);
                         if (currentLine.check()) {
                             that.classList.add('ruleOk');
+                            that.classList.remove('ruleError');
                         } else {
+                            const error = currentLine.rule.getError();
+                            console.log(error)
                             that.classList.remove('ruleOk');
+                            that.classList.add('ruleError');
+
                         }
                     }
                 }
@@ -451,12 +552,14 @@ function handleKeyupRule(event) {
             tooltipElem.style.top = top + 'px';
             
             if ((key == 'Tab' || key == 'Enter')) {
+                // rule was selected
                 const suggestion = results[selectionIndex][0];
                 that.textContent = suggestion;
                 tooltipElem.remove();
                 tooltipElem = null;
                 selectionIndex = 0;
                 ruleSelected = true;
+                highlightOperator(lineNo,TokenType.AND);
                 SetCaretPosition(that,currentToken.pos + suggestion.length);
             }
             if (key == 'Escape') {
@@ -574,7 +677,6 @@ function handleKeyup(event) {
             
             if ((key == 'Tab' || key == 'Enter')) {
                 console.log('set');
-                //XXX FIXME insert suggestion
                 const suggestion = results[selectionIndex][0]; // logic symbol
                 that.textContent = that.textContent.slice(0,currentToken.pos) +  suggestion + that.textContent.slice( currentToken.pos + searchString.length);
                 tooltipElem.remove();
@@ -609,6 +711,10 @@ function parseLineDiv(div) {
               console.log('no valid formula in line', div.dataset.lineNumber)
           }
     }
+}
+
+function parseText(text){
+    return new Parser(new Scanner(text.trim(),0).scanTokens()).parse();
 }
 
 const indentAmount = '50';
@@ -934,6 +1040,7 @@ function handlePaste(event) {
 function handleBlur(event) {
     console.log('focusout')
     const that = event.target;
+    const lineNo = that.dataset.lineNumber;
     if (that.classList.contains('rule')){
         //clean up
         document.querySelectorAll('.line').forEach(line => {
@@ -943,6 +1050,8 @@ function handleBlur(event) {
         if(that.textContent.trim() == ''){
             that.textContent='';
         }
+        // remove highlights/hints 
+        that.previousElementSibling.textContent = that.previousElementSibling.textContent;
     }
     editor.checkFitchLines();
 }
@@ -950,7 +1059,9 @@ function handleBlur(event) {
 function handleFocus(event) {
     console.log('focusin')
     const that = event.target;
+    const lineNo = that.dataset.lineNumber;
     if (that.classList.contains('rule')) {
+        highlightOperator(lineNo)
         //if rule was already selected, start at end
         if (that.textContent.length > 0){
             const indexColon = that.textContent.indexOf(':');
@@ -962,6 +1073,10 @@ function handleFocus(event) {
         } else {
             ruleSelected = false;
         }
+    }
+    if (that.classList.contains('line')) {
+        // reset styling to plain text (strip tags)
+        that.textContent = that.textContent;
     }
 }
 

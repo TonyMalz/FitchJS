@@ -59,7 +59,7 @@ aside {
     grid-area: line;
     /*position: relative; */
     width: 100%;
-    overflow: hidden;
+    /*overflow: hidden;*/
     margin : 0px;
     padding-bottom: 5px;
     /*word-break: break-all;*/
@@ -108,7 +108,7 @@ aside {
 }
 
 .fitchline {
-    background: url(line.png) no-repeat 0px 26px;
+    background: url(line.png) no-repeat 0px 24px;
 }
 
 .rule {
@@ -123,6 +123,7 @@ aside {
     user-select: none;
     -moz-user-select: none;
     cursor: pointer;
+    position: relative;
 }
 .rule:empty:before {
     content: attr(placeholder);
@@ -137,7 +138,20 @@ aside {
     border: 1px solid rgba(76, 175, 80, 0.79);
     color: #adff2fba;
 }
-
+.ruleOk:after {
+    content: '✓';
+    position: absolute;
+    right: 10px;
+}
+.ruleError {
+    border: 1px dashed #d01111;
+    color: #ff7272eb;
+}
+.ruleError:after {
+    content: 'X';
+    position: absolute;
+    right: 10px;
+}
 
 .tooltip {
     position: absolute;
@@ -217,4 +231,41 @@ aside {
 }
 .line:empty ~ .rule {
     visibility: hidden;
+}
+
+.connectiveHighlightBinary {
+    !color: yellow;
+    !padding-left: 5px;
+    !padding-right: 5px;
+    border: 1px dashed rgba(222, 184, 135, 0.35);
+    border-radius: 3px;
+    margin: 0;
+}
+
+.connectiveHighlightUnary {
+    /*color: #02ff00;*/
+    padding-right: 5px;
+}
+
+.connectivePart{
+        /* color: yellow; */
+    border: 1px dashed rgba(222, 184, 135, 0.35);
+    border-radius: 3px;
+    margin: 0;
+}
+.connectivePart:first-child {
+        /* color: yellow; */
+    !padding-left: 10px;
+}
+.connectivePart:last-child {
+    padding-right: 10px;
+}
+
+.highlightOperatorOk {
+    color: #02ff00;
+    border: 1px transparent;
+}
+.highlightFormulaOk {
+    border: 1px transparent;
+    color: #02ff00;
 }

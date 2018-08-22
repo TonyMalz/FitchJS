@@ -704,6 +704,10 @@ class TermFunction extends Term {
 }
 
 class Rule {
+    constructor(){
+        this.errorCode = 0;
+        this.errorMessage = '';
+    }
     validate(formula){
         console.error('validate rule not implemented')
         return false;
@@ -718,6 +722,13 @@ class Rule {
         }
         str += ')'
         return str;
+    }
+    getError(){
+        return {'code':this.errorCode, 'message' : this.errorMessage};
+    }
+    error(code,msg){
+        this.errorCode = code;
+        this.errorMessage = msg;
     }
 }
 class RuleAndElim extends Rule{
@@ -752,11 +763,13 @@ class RuleAndIntro extends Rule{
         this.sources.forEach(sourceForm => {
             if (!(sourceForm instanceof Formula)) {
                 console.error('Expected a formula as source');
+                this.error(1,'The formula of the selected line is not well formed');
                 return false;
             }
         });
         if (!(formula instanceof FormulaAnd)) {
             console.error('Expected formula to validate to be of type FormulaAnd');
+            this.error(2,'The formula of the current line is not well formed');
             return false;
         }
 
@@ -766,6 +779,7 @@ class RuleAndIntro extends Rule{
             for (const sourceTerm of this.sources){
                 if(sourceTerm.line > term.line){
                     console.error('Source formula must occur before current formula')
+                    this.error(3,'The line number of the current formula must be greater than the selected line');
                     return false;
                 }
                 //console.log(String(term),String(sourceTerm))
@@ -776,6 +790,7 @@ class RuleAndIntro extends Rule{
             }
             if (!found){
                 console.error(`Did not find ${term} in any source formula`);
+                this.error(4,`You have to select a line that contains the formula '${term}' `);
                 return false;
             }
             found = false;
