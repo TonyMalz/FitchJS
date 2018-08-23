@@ -380,39 +380,6 @@ class Parser {
         return this.e5();
     }
     e3(){
-        const left = this.e4();
-        if (this.match(TokenType.AND)) {
-            const formulas = [];
-            const connectives = [];
-            formulas.push(left);
-            connectives.push(this.previous());
-            formulas.push(this.e5());
-            while (this.match(TokenType.AND)){
-                connectives.push(this.previous());
-                formulas.push(this.e5());
-            }
-            return new FormulaAnd(formulas,connectives);
-        }
-        return left;
-    }
-    e2(){
-        const left = this.e3();
-        if (this.match(TokenType.OR)) {
-            const formulas = [];
-            const connectives = [];
-            formulas.push(left);
-            connectives.push(this.previous());
-            formulas.push(this.e5());
-            while (this.match(TokenType.OR)){
-                connectives.push(this.previous());
-                formulas.push(this.e5());
-            }
-            return new FormulaOr(formulas,connectives);
-        }
-        return left;
-    }
-
-    e1(){
         if (this.match(TokenType.EXISTS,TokenType.FOR_ALL)) {
             const quantifier = this.previous();
             if(this.match(TokenType.IDENTIFIER)) {
@@ -424,14 +391,46 @@ class Parser {
                     return new FormulaQuantified(quantifier, variable, right);
                 } 
                 if (this.peek().type == TokenType.EXISTS || this.peek().type == TokenType.FOR_ALL) {
-                    const right = this.e0();
+                    const right = this.e3();
                     return new FormulaQuantified(quantifier, variable, right);
                 }
                 throw this.error(this.peek(), "Expected ( or a quantifier");
             }
             throw this.error(peek(),"Expected a variable after quantification.");
         }
-        return this.e2();
+        return this.e4();
+    }
+    e2(){
+        const left = this.e3();
+        if (this.match(TokenType.AND)) {
+            const formulas = [];
+            const connectives = [];
+            formulas.push(left);
+            connectives.push(this.previous());
+            formulas.push(this.e3());
+            while (this.match(TokenType.AND)){
+                connectives.push(this.previous());
+                formulas.push(this.e3());
+            }
+            return new FormulaAnd(formulas,connectives);
+        }
+        return left;
+    }
+    e1(){
+        const left = this.e2();
+        if (this.match(TokenType.OR)) {
+            const formulas = [];
+            const connectives = [];
+            formulas.push(left);
+            connectives.push(this.previous());
+            formulas.push(this.e3());
+            while (this.match(TokenType.OR)){
+                connectives.push(this.previous());
+                formulas.push(this.e3());
+            }
+            return new FormulaOr(formulas,connectives);
+        }
+        return left;
     }
     e0() {
         const left = this.e1();
