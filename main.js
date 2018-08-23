@@ -144,9 +144,13 @@ suggestrules.set("∧ And Elim", '∧ Elim:');
 suggestrules.set("v Or Intro", '∨ Intro:');
 suggestrules.set("v Or Elim", '∨ Elim:');
 suggestrules.set("¬ Not Intro", '¬ Intro:');
+suggestrules.set("¬ Negation Intro", '¬ Intro:');
 suggestrules.set("¬ Not Elim", '¬ Elim:');
+suggestrules.set("¬ Negation Elim", '¬ Elim:');
 suggestrules.set("∀ For All Intro", '∀ Intro:');
+suggestrules.set("∀ Universal Intro", '∀ Intro:');
 suggestrules.set("∀ For All Elim", '∀ Elim:');
+suggestrules.set("∀ Universal Elim", '∀ Elim:');
 suggestrules.set("-> Implication Intro", '→ Intro:');
 suggestrules.set("-> Implication Elim", '→ Elim:');
 suggestrules.set("<-> Bi-Implication Intro", '↔ Intro:');
@@ -321,7 +325,19 @@ function highlightOperator(lineNumber,...matches){
         const before = content.substring(0,offset);
         const after =  content.substring(offset+length);
         const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        line.innerHTML = `<span class='connectivePart'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+        const beforeFormula = parseText(before);
+        let foundForm = false;
+        if (beforeFormula) {
+            const matchForm = String(beforeFormula);
+            for (const form of matchFormulas){
+                if (String(form) == matchForm){
+                    foundForm = true;
+                    break;
+                }
+            }
+        }
+        const formMatch = foundForm ? matchFormulaClassName : '';
+        line.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
     } else if (formula.connectives) {
         // and / or
         let html = '';

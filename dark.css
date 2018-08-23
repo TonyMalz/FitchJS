@@ -253,13 +253,6 @@ aside {
     border-radius: 3px;
     margin: 0;
 }
-.connectivePart:first-child {
-        /* color: yellow; */
-    !padding-left: 10px;
-}
-.connectivePart:last-child {
-    padding-right: 10px;
-}
 
 .highlightOperatorOk {
     color: #02ff00;
