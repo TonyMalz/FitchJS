@@ -1,56 +1,6 @@
-/*
-style="-webkit-user-select:text;" is needed for iPad
-
-*/
-
-const editor = new Editor();
-
-function getCaretCharacterOffsetWithin(element) {
-  let caretOffset = 0;
-  const doc = element.ownerDocument || element.document;
-  const win = doc.defaultView || doc.parentWindow;
-  let sel;
-  if (typeof win.getSelection !== "undefined") {
-    sel = win.getSelection();
-    if (sel.rangeCount > 0) {
-      let range = win.getSelection().getRangeAt(0);
-      let preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(element);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      caretOffset = preCaretRange.toString().length;
-    }
-  } else if ((sel = doc.selection) && sel.type != "Control") {
-    let textRange = sel.createRange();
-    let preCaretTextRange = doc.body.createTextRange();
-    preCaretTextRange.moveToElementText(element);
-    preCaretTextRange.setEndPoint("EndToEnd", textRange);
-    caretOffset = preCaretTextRange.text.length;
-  }
-  return caretOffset;
-}
-
-function getCaretPosition() {
-    const sel = window.getSelection();
-    if (sel) {
-        return sel.anchorOffset;
-    } 
-    return -1;
-}
-
-
-function showCaretPos(event) {
-  let el = event.target;
-  let caretPosEl = document.getElementById("caretPos");
-  editor.caretPos = getCaretPosition();
-  if (!editor.selectedLines)
-    return;
-  const line = editor.selectedLines[0].dataset.lineNumber;
-  caretPosEl.textContent = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
-}
 
 
 let mousedown = null;
-let activeLine = null;
 function handleMouse(event) {
     console.log(event)
     const that = event.target;
@@ -76,8 +26,8 @@ function handleMouse(event) {
             }
             editor.selectedLines = null;
             mousedown = event;
-            if(activeLine !== null){
-                activeLine.contentEditable = 'false';
+            if(editor.activeLine !== null){
+                editor.activeLine.contentEditable = 'false';
             }
             break;
         case 'mouseup':
@@ -96,7 +46,7 @@ function handleMouse(event) {
                         editor.caretPos = range.startOffset;
                         console.log(editor.caretPos)
                     }
-                    activeLine = that;
+                    editor.activeLine = that;
                 } 
             }
             const sel = window.getSelection()
@@ -201,11 +151,7 @@ function handleKeydownRule(event){
             if (tooltipElem){
                 break;
             }
-            const next = editor.addNewLineAfter(lineNo);
-            next.style.textIndent = (that.previousElementSibling.dataset.level * indentAmount) + 'px';
-            next.dataset.level = that.previousElementSibling.dataset.level;
-            next.style.zIndex = parseInt(100 - next.dataset.level);
-            editor.selectedLines = [next];
+            const next = editor.addEmptyLineAfter(lineNo);
             SetCaretPosition(next,0);
             enterProcessed = true;
             break;
@@ -215,7 +161,6 @@ function handleKeydownRule(event){
             }
             if (lineNo < editor.numberOfLines) {
                 const next = document.getElementById('l'+(lineNo + 1));
-                editor.selectedLines = [next];
                 SetCaretPosition(next,editor.caretPos);
             }
             break;
@@ -225,7 +170,6 @@ function handleKeydownRule(event){
             }
             if (lineNo > 1) {
                 const next = document.getElementById('l'+(lineNo - 1));
-                editor.selectedLines = [next];
                 SetCaretPosition(next,editor.caretPos);
             }
             break;
@@ -281,117 +225,8 @@ function handleKeydownRule(event){
     }
     event.preventDefault();
 }
-
-function highlightOperator(lineNumber,...matches){
-    const matchOperatorClassName = ' highlightOperatorOk';
-    const matchFormulaClassName = ' highlightFormulaOk';
-
-    const line = editor.getLineByNumber(lineNumber);
-    if (!line) return;
-
-    const formula = parseLineDiv(line);
-    if (!formula) return;
-
-    let matchOperator = null;
-    let matchFormulas = []
-    for (const match of matches){
-        if (typeof match == 'number' ) {
-            matchOperator = match;
-        } else if (match instanceof Formula){
-            matchFormulas.push(match);
-        }
-    }
-
-    // try to highlight corresponding logical connective in current formula
-    if (formula.connective) {
-        // -> / <->
-        const connective = formula.connective;
-        const offset = connective.pos;
-        const length = connective.lexeme.length;
-        const content = line.textContent;
-        const before = content.substring(0,offset);
-        const after =  content.substring(offset+length);
-        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        const beforeFormula = parseText(before);
-        let foundForm = false;
-        if (beforeFormula) {
-            const matchForm = String(beforeFormula);
-            for (const form of matchFormulas){
-                if (String(form) == matchForm){
-                    foundForm = true;
-                    break;
-                }
-            }
-        }
-        const formMatch = foundForm ? matchFormulaClassName : '';
-        line.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
-    } else if (formula.connectives) {
-        // and / or
-        let html = '';
-        let content = line.textContent;
-        let i = 0;
-
-        for (const connective of formula.connectives){
-            const offset = connective.pos - i;
-            const length = connective.lexeme.length;
-            const before = content.substring(0,offset);
-            const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-            const beforeFormula = parseText(before);
-            let foundForm = false;
-            if (beforeFormula) {
-                const matchForm = String(beforeFormula);
-                for (const form of matchFormulas){
-                    if (String(form) == matchForm){
-                        foundForm = true;
-                        break;
-                    }
-                }
-            }
-            const formMatch = foundForm ? matchFormulaClassName : '';
-            html += `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span>`;
-            i = offset + length;
-            content = content.substring(i);
-        }
-        const beforeFormula = parseText(content);
-        let foundForm = false;
-        if (beforeFormula) {
-            const matchForm = String(beforeFormula);
-            for (const form of matchFormulas){
-                if (String(form) == matchForm){
-                    foundForm = true;
-                    break;
-                }
-            }
-        }
-        const formMatch = foundForm ? matchFormulaClassName : '';
-        html += `<span class='connectivePart${formMatch}'>${content}</span>`;
-        line.innerHTML = html;
-    } else if (formula.operator) {
-        // not
-        const connective = formula.operator;
-        const offset = connective.pos;
-        const length = connective.lexeme.length;
-        const content = line.textContent;
-        const before = content.substring(0,offset);
-        const after =  content.substring(offset+length);
-        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
-    } else if (formula.quantifier){
-        // universal / existential
-        const connective = formula.quantifier;
-        const offset = connective.pos;
-        const length = formula.variable.pos + formula.variable.lexeme.length;
-        const content = line.textContent;
-        const before = content.substring(0,offset);
-        const after =  content.substring(offset+length);
-        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}${formula.variable}</span><span class='connectivePart'>${after}</span>`;
-    }
-}
-
 //XXX FIXME on per line basis
 let ruleSelected = false;
-
 function handleKeyupRule(event) {
     const key = event.key;
     const that = event.target;
@@ -575,6 +410,8 @@ function handleKeyupRule(event) {
 }
 
 function handleKeyup(event) {
+    editor.caretPos = getCaretPosition();
+    caretPos = editor.caretPos;
     showCaretPos(event);
     const key = event.key;
     const that = event.target;
@@ -587,7 +424,7 @@ function handleKeyup(event) {
     // get token under caret position
     let currentToken = null;
     let textval = that.textContent;
-    const caretPos = getCaretPosition();
+    
     const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
     
     for (let token of tokens) {
@@ -696,30 +533,6 @@ function handleKeyup(event) {
     // end autocompletion
 }
 
-function parseLineDiv(div) {
-    const text = div.textContent.trim();
-
-    if ( text != '' && div.dataset.lineNumber){
-          console.log('check line')
-          const parsedFormula = new Parser(new Scanner(text,div.dataset.lineNumber).scanTokens()).parse();
-          if (parsedFormula) {
-              console.log(parsedFormula)
-              div.classList.add('lineOk'); //='#4CAF50 -9px 0px 0px 0px';
-              div.classList.remove('lineError');
-              return parsedFormula;
-          } else {
-              div.classList.add('lineError');
-              div.classList.remove('lineOk');//='#E91E63 -9px 0px 0px 0px';
-              return null;
-              console.log('no valid formula in line', div.dataset.lineNumber)
-          }
-    }
-}
-
-function parseText(text){
-    return new Parser(new Scanner(text.trim(),0).scanTokens()).parse();
-}
-
 const indentAmount = '50';
 function handleKeydown(event) {
     console.log('keydown')
@@ -741,7 +554,7 @@ function handleKeydown(event) {
         case "ArrowLeft":
           console.log('left',lineNo);
           if (lineNo > 1 && caretPos === 0) {
-            const next = document.getElementById('l'+(lineNo -1));
+            const next = editor.getLineByNumber(lineNo-1);
             SetCaretPosition(next,next.textContent.length);
           } else {
             return;
@@ -750,7 +563,7 @@ function handleKeydown(event) {
         case "ArrowRight":
           console.log('right',lineNo);
           if (lineNo < editor.numberOfLines && caretPos === that.textContent.length) {
-            const next = document.getElementById('l'+(lineNo +1));
+            const next = editor.getLineByNumber(lineNo+1);
             SetCaretPosition(next,0);
           } else {
             return;
@@ -762,15 +575,11 @@ function handleKeydown(event) {
             }
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
-            const next = document.getElementById('l'+(lineNo + 1));
-            parseLineDiv(that);
+            const next = editor.getLineByNumber(lineNo+1);
             SetCaretPosition(next,editor.caretPos);
           } else {
             //add new line if in last line
-            const next = editor.addNewLineAfter(lineNo);
-            next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
-            next.dataset.level = that.dataset.level;
-            next.style.zIndex = parseInt(100 - next.dataset.level);
+            const next = editor.addEmptyLineAfter(lineNo);
             SetCaretPosition(next,0);
           }
           break;
@@ -780,8 +589,7 @@ function handleKeydown(event) {
           }
           console.log('up', lineNo);
           if (lineNo > 1) {
-            const next = document.getElementById('l'+(lineNo - 1));
-            parseLineDiv(that);
+            const next = editor.getLineByNumber(lineNo-1);
             SetCaretPosition(next,editor.caretPos);
           }
           break;
@@ -790,16 +598,15 @@ function handleKeydown(event) {
             break;
           }
           console.log('Enter');
-          const next = editor.addNewLineAfter(lineNo);
-          next.style.textIndent = (that.dataset.level * indentAmount) + 'px';
-          next.dataset.level = that.dataset.level;
-          next.style.zIndex = parseInt(100 - next.dataset.level);
-          //split content
-          const textLeft = that.textContent.slice(caretPos);
-          that.textContent = that.textContent.slice(0,caretPos);
-          next.textContent = textLeft;
+          const next = editor.addEmptyLineAfter(lineNo);
+          
+          //split content at cursor position
+          const textLeft  = that.textContent.slice(0,caretPos);
+          const textRight = that.textContent.slice(caretPos);
+          const current = editor.getLine(lineNo);
+          current.setContent(textLeft);
+          next.setContent(textRight);
           SetCaretPosition(next,0);
-          parseLineDiv(that);
           enterProcessed = true;
           break;
         case "Tab":
@@ -1031,13 +838,12 @@ function handlePaste(event) {
     let lastLine = that;
     let currentLine = parseInt(that.dataset.lineNumber);
     for (let i=1; i<lines.length; i++){
-       const newLine = editor.addNewLineAfter(currentLine++);
-       newLine.textContent = lines[i];
-       newLine.dataset.level = indentLevel;
-       newLine.style.textIndent = (indentLevel * indentAmount ) + 'px';
+       const newLine = editor.addEmptyLineAfter(currentLine++);
+       newLine.setContent(lines[i]);
+       newLine.setLevel(indentLevel);
        lastLine = newLine;
     }
-    SetCaretPosition(lastLine,lastLine.textContent.length);
+    SetCaretPosition(lastLine,lastLine.content.length);
 }
 
 function handleBlur(event) {
@@ -1083,100 +889,212 @@ function handleFocus(event) {
     }
 }
 
+const editor = new Editor();
 window.addEventListener("load", function(){
     const ed = document.getElementById('editor');
     ed.addEventListener('keyup', handleKeyup);
     ed.addEventListener('paste', handlePaste);
-    document.addEventListener("keydown", handleKeydown);
     ed.addEventListener("focusout", handleBlur);
     ed.addEventListener("focusin", handleFocus);
+    // because of range selection with mouse
+    document.addEventListener("keydown", handleKeydown);
+
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
     window.addEventListener('mouseup', handleMouse);
     
-
-    editor.checkFitchLines();
-
-    SetCaretPosition(document.getElementById('l3'),0);
+    editor.addPremise('Peter');
+    editor.addPremise('Leo');
+    editor.addLine('Peter ∧ Leo');
 });
 
+
+function parseText(text){
+    return new Parser(new Scanner(text.trim(),0).scanTokens()).parse();
+}
+
+function parseLineDiv(div) {
+    const text = div.textContent.trim();
+
+    if ( text != '' && div.dataset.lineNumber){
+          console.log('check line')
+          const parsedFormula = new Parser(new Scanner(text,div.dataset.lineNumber).scanTokens()).parse();
+          if (parsedFormula) {
+              console.log(parsedFormula)
+              div.classList.add('lineOk');
+              div.classList.remove('lineError');
+              return parsedFormula;
+          } else {
+              div.classList.add('lineError');
+              div.classList.remove('lineOk');
+              return null;
+              console.log('no valid formula in line', div.dataset.lineNumber)
+          }
+    }
+}
+
+// Move caret to a specific point in a DOM element
+function SetCaretPosition(el, pos){
+    //console.log('caret', pos, el)
+    if (!el)
+        return -1;
+    if (el instanceof Line){
+        el = el.getDom();
+    }
+    if (el.classList.contains('line')){
+        editor.selectedLines = [el];
+        el.contentEditable = 'true';
+        if(editor.activeLine && editor.activeLine != el){
+                editor.activeLine.contentEditable = 'false';
+        }
+        editor.activeLine = el;
+    }
     
-    function setCursor() {
-        const line = document.getElementById('l3');
-        SetCaretPosition(line,3);
+    if (el.childNodes.length == 0) {
+        el.appendChild(document.createTextNode(''));           
+    }
+    //XXX FIXME
+    // Loop through all child nodes
+    for(let node of el.childNodes){
+        if(node.nodeType == 3){ // we have a text node
+            pos = Math.min(node.length,pos);
+            editor.caretPos = pos;
+            // finally add our range
+            let range = document.createRange(),
+                sel = window.getSelection();
+            range.setStart(node,pos);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            return -1; // we are done
+            
+        }
+    }
+    return pos; // needed because of recursion stuff
+}
+
+function getCaretPosition() {
+    const sel = window.getSelection();
+    if (sel) {
+        return sel.anchorOffset;
+    } 
+    return -1;
+}
+
+function showCaretPos(event) {
+  let el = event.target;
+  let caretPosEl = document.getElementById("caretPos");
+  if (!editor.selectedLines)
+    return;
+  const line = editor.selectedLines[0].dataset.lineNumber;
+  caretPosEl.textContent = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);
+}
+
+
+
+function highlightOperator(lineNumber,...matches){
+    const matchOperatorClassName = ' highlightOperatorOk';
+    const matchFormulaClassName = ' highlightFormulaOk';
+
+    const line = editor.getLineByNumber(lineNumber);
+    if (!line) return;
+
+    const formula = parseLineDiv(line);
+    if (!formula) return;
+
+    let matchOperator = null;
+    let matchFormulas = []
+    for (const match of matches){
+        if (typeof match == 'number' ) {
+            matchOperator = match;
+        } else if (match instanceof Formula){
+            matchFormulas.push(match);
+        }
     }
 
-    // Move caret to a specific point in a DOM element
-    function SetCaretPosition(el, pos){
-        //console.log('caret', pos, el)
-        if (!el)
-            return -1;
-        if (el.classList.contains('line')){
-            editor.selectedLines = [el];
-            el.contentEditable = 'true';
-            if(activeLine && activeLine != el){
-                    activeLine.contentEditable = 'false';
+    // try to highlight corresponding logical connective in current formula
+    if (formula.connective) {
+        // -> / <->
+        const connective = formula.connective;
+        const offset = connective.pos;
+        const length = connective.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        const beforeFormula = parseText(before);
+        let foundForm = false;
+        if (beforeFormula) {
+            const matchForm = String(beforeFormula);
+            for (const form of matchFormulas){
+                if (String(form) == matchForm){
+                    foundForm = true;
+                    break;
+                }
             }
-            activeLine = el;
         }
-        
-        if (el.childNodes.length == 0) {
-            el.appendChild(document.createTextNode(''));           
-        }
-        //XXX FIXME
-        // Loop through all child nodes
-        for(let node of el.childNodes){
-            if(node.nodeType == 3){ // we have a text node
-                pos = Math.min(node.length,pos);
-                // finally add our range
-                let range = document.createRange(),
-                    sel = window.getSelection();
-                range.setStart(node,pos);
-                range.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(range);
-                return -1; // we are done
-                
-            }
-            // if(node.nodeType == 3){ // we have a text node
-            //     if(node.length >= pos){
-            //         // finally add our range
-            //         let range = document.createRange(),
-            //             sel = window.getSelection();
-            //         range.setStart(node,pos);
-            //         range.collapse(true);
-            //         sel.removeAllRanges();
-            //         sel.addRange(range);
-            //         return -1; // we are done
-            //     }else{
-            //         pos -= node.length;
-            //     }
-            // } else {
-            //     pos = SetCaretPosition(node,pos);
-            //     if(pos == -1){
-            //         return -1; // no need to finish the for loop
-            //     }
-            // }
-        }
-        return pos; // needed because of recursion stuff
-    }
+        const formMatch = foundForm ? matchFormulaClassName : '';
+        line.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+    } else if (formula.connectives) {
+        // and / or
+        let html = '';
+        let content = line.textContent;
+        let i = 0;
 
-    //underlines the selected text
-    function underline()
-    {
-        document.execCommand("underline", false, null);
+        for (const connective of formula.connectives){
+            const offset = connective.pos - i;
+            const length = connective.lexeme.length;
+            const before = content.substring(0,offset);
+            const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+            const beforeFormula = parseText(before);
+            let foundForm = false;
+            if (beforeFormula) {
+                const matchForm = String(beforeFormula);
+                for (const form of matchFormulas){
+                    if (String(form) == matchForm){
+                        foundForm = true;
+                        break;
+                    }
+                }
+            }
+            const formMatch = foundForm ? matchFormulaClassName : '';
+            html += `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span>`;
+            i = offset + length;
+            content = content.substring(i);
+        }
+        const beforeFormula = parseText(content);
+        let foundForm = false;
+        if (beforeFormula) {
+            const matchForm = String(beforeFormula);
+            for (const form of matchFormulas){
+                if (String(form) == matchForm){
+                    foundForm = true;
+                    break;
+                }
+            }
+        }
+        const formMatch = foundForm ? matchFormulaClassName : '';
+        html += `<span class='connectivePart${formMatch}'>${content}</span>`;
+        line.innerHTML = html;
+    } else if (formula.operator) {
+        // not
+        const connective = formula.operator;
+        const offset = connective.pos;
+        const length = connective.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+    } else if (formula.quantifier){
+        // universal / existential
+        const connective = formula.quantifier;
+        const offset = connective.pos;
+        const length = formula.variable.pos + formula.variable.lexeme.length;
+        const content = line.textContent;
+        const before = content.substring(0,offset);
+        const after =  content.substring(offset+length);
+        const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
+        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}${formula.variable}</span><span class='connectivePart'>${after}</span>`;
     }
-   
-    //makes the selected text as hyperlink.
-    function link()
-    {
-        let url = prompt("Enter the URL");
-        document.execCommand("createLink", false, url);
-    }
-   
-    //displays HTML of the output
-    function displayhtml()
-    {
-        //set textContent of pre tag to the innerHTML of editable div. textContent can take any form of text and display it as it is without browser interpreting it. It also preserves white space and new line characters.
-        document.getElementsByClassName("htmloutput")[0].textContent = document.getElementsByClassName("editor")[0].innerHTML;
-    }
+}
