@@ -433,8 +433,6 @@ function handleKeyup(event) {
 
     // get token under caret position
     let currentToken = null;
-    let textval = that.textContent;
-    
     const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
     
     for (let token of tokens) {
@@ -455,7 +453,8 @@ function handleKeyup(event) {
         return;
     }
     // add matching parenthesis
-    if (key == '(') {
+    if (key == '(' && (that.textContent.length == caretPos || that.textContent[caretPos] == ' ')) {
+        console.log('parens:',currentToken,caretPos)
         const closeCount = (that.textContent.match(/\)/g) || []).length;
         const openCount = (that.textContent.match(/\(/g)).length;
         // XXX 
