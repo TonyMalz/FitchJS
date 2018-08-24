@@ -1061,7 +1061,7 @@ function highlightFormulaParts(lineNumber,...matches){
         let html = '';
         let content = line.textContent;
         let i = 0;
-
+        // FIXME odd number of connectors
         for (const connective of formula.connectives){
             const offset = connective.pos - i;
             const length = connective.lexeme.length;

@@ -73,18 +73,18 @@ p.addFormula('Peter', new RuleOrElim(sp1,sp2,sp3,p.Step(1)))
 p.check()
 
 
-gLineNo = 0;
-p = new Proof()
-p.addPremise('∀x(P(x, t) → A(x, t))')
-p.addPremise('∀x(P(x, t))')
-sp = new Proof()
-      sp.addPremise('c')
-      sp.addFormula('P(c,t) -> A(c,t) ', new RuleUniversalElim(p.Step(1)))
-      sp.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
-      sp.addFormula('A(c,t)', new RuleImplicationElim(sp.Step(2),sp.Step(3)))
-p.addSubProof(sp)
-p.addFormula('∀x(A(x, t))', new RuleUniversalIntro(sp))
-p.check()
+// gLineNo = 0;
+// p = new Proof()
+// p.addPremise('∀x(P(x, t) → A(x, t))')
+// p.addPremise('∀x(P(x, t))')
+// sp = new Proof()
+//       sp.addPremise('c') //XXX FIXME Premsise for AllIntro
+//       sp.addFormula('P(c,t) -> A(c,t) ', new RuleUniversalElim(p.Step(1)))
+//       sp.addFormula('P(c,t)', new RuleUniversalElim(p.Step(2)))
+//       sp.addFormula('A(c,t)', new RuleImplicationElim(sp.Step(2),sp.Step(3)))
+// p.addSubProof(sp)
+// p.addFormula('∀x(A(x, t))', new RuleUniversalIntro(sp))
+// p.check()
 
 gLineNo = 0;
 p = new Proof()
@@ -133,26 +133,26 @@ const l13 = '⊥'
 const l14 = 'Lulu(a,b,c)'
 const l15 = '¬Peter'
 const l16 = '⊥'
-const l17 = 'today → tomorrow'
-const l18 = 'today '
-const l19 = 'tomorrow '
-const l20 = '(today → tomorrow) → dayaftertomorrow '
-const l21 = 'dayaftertomorrow '
-const l22 = '(bubu) ↔ cat '
-const l23 = 'cat'
-const l24 = 'bubu'
+const l17 = 'Today → Tomorrow'
+const l18 = 'Today '
+const l19 = 'Tomorrow '
+const l20 = '(Today → Tomorrow) → Dayaftertomorrow '
+const l21 = 'Dayaftertomorrow '
+const l22 = '(Bubu) ↔ Cat '
+const l23 = 'Cat'
+const l24 = 'Bubu'
 const l25 = 'Lulu(a,b,c)'
 const l26 = 'Lulu(a,b,c)'
-const l27 = 'Lulu(a,b,c) = cat'
-const l28 = 'Parse(cat,Lulu(a,b,c))'
+const l27 = 'lulu(a,b,c) = cat'
+const l28 = 'Parse(cat,lulu(a,b,c))'
 const l29 = 'Parse(cat,cat)'
 const l30 = 'b = b'
 const l31 = 'b = a'
 const l32 = 'a=b'
 const l33 = '∀x∀t(Zuhause(x, t) → ¬AmTatort(x, t))'
-const l34 = '∀t(Zuhause(Peter, t) → ¬AmTatort(Peter,t))'
-const l35 = 'Tet(a) ∧ W(b, S(a)) ∧ a = a'
-const l36 = '∃x(Tet(x) ∧ W(b,S(x)) ∧ x = x)'
+const l34 = '∀t(Zuhause(peter, t) → ¬AmTatort(peter,t))'
+const l35 = 'Tet(a) ∧ W(b, s(a)) ∧ a = a'
+const l36 = '∃x(Tet(x) ∧ W(b,s(x)) ∧ x = x)'
 
 //const tokens = new Scanner(l5,3).scanTokens()
 //console.log(tokens)

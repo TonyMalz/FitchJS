@@ -361,16 +361,10 @@ class Parser {
     e5(){
         if (this.match(TokenType.LEFT_PAREN)) {
             const left = this.e0();
-            this.consume(TokenType.RIGHT_PAREN, "Expected ')' after predicate");
+            this.consume(TokenType.RIGHT_PAREN, "Expected ')' after formula");
             return left;
         }
-        const term = this.term();
-        if (this.match(TokenType.EQUAL)){
-            const connective = this.previous();
-            const right = this.term();
-            return new FormulaEquality(term,connective,right);
-        }
-        return term;
+        return this.predicate();
     }
     e4(){
         if (this.match(TokenType.NOT)) {
@@ -401,7 +395,7 @@ class Parser {
         }
         return this.e4();
     }
-    e2(){
+    e0() {
         const left = this.e3();
         if (this.match(TokenType.AND)) {
             const formulas = [];
@@ -415,10 +409,6 @@ class Parser {
             }
             return new FormulaAnd(formulas,connectives);
         }
-        return left;
-    }
-    e1(){
-        const left = this.e2();
         if (this.match(TokenType.OR)) {
             const formulas = [];
             const connectives = [];
@@ -431,43 +421,75 @@ class Parser {
             }
             return new FormulaOr(formulas,connectives);
         }
-        return left;
-    }
-    e0() {
-        const left = this.e1();
         if (this.match(TokenType.IMPL)) {
             const connective = this.previous();
-            const right = this.e1(); 
+            const right = this.e3(); 
             return new FormulaImpl(left, connective, right);
-        } else if (this.match(TokenType.BI_IMPL)) {
+        }
+        if (this.match(TokenType.BI_IMPL)) {
             const connective = this.previous();
-            const right = this.e1(); 
+            const right = this.e3(); 
             return new FormulaBiImpl(left, connective, right);
         }
         return left;
     }
 
     term(){
-        if(this.match(TokenType.TRUE, TokenType.FALSE, TokenType.NUMBER)){
+        if(this.match(TokenType.NUMBER)){
             return new TermConstant(this.previous());
         }
         if(this.match(TokenType.IDENTIFIER)){
             const identifier = this.previous();
+            if (identifier.lexeme[0] !== identifier.lexeme[0].toLowerCase()){
+                // convention: if identifier starts with lower case letter it is a term
+                throw this.error(identifier, "Expected a function or variable and not a predicate");
+            }
             if (this.match(TokenType.LEFT_PAREN)){
-                //FIXME allow arity 0 => Tet() ?
                 if (this.match(TokenType.RIGHT_PAREN)) {
                     console.log('empty arg list');
                     return new TermFunction(identifier,[]);
                 }
                 const terms = this.term_list();
-                this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list");
-                return new TermFunction(identifier,terms);
+                this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list of a term function");
+                return new TermFunction(identifier,[]);
             }
             return new TermVariable(identifier);
         }
-        throw this.error(this.peek(), "Expected a predicate or formula at this position");
+        throw this.error(this.peek(), "Expected a function or variable at this position");
     }
-
+    predicate(){
+        if(this.match(TokenType.TRUE, TokenType.FALSE)){
+            return new PredicateConstant(this.previous());
+        }
+        if(this.peek().type === TokenType.IDENTIFIER) {
+            const identifier = this.peek();
+            if (identifier.lexeme[0] === identifier.lexeme[0].toLowerCase()){
+                // convention: if identifier starts with lower case letter it is a term
+                // only equality (t1 = t2) is a valid predicate
+                const left = this.term();
+                if (this.match(TokenType.EQUAL)){
+                    const connective = this.previous();
+                    const right = this.term();
+                    return new FormulaEquality(left,connective,right);
+                }
+                throw this.error(this.peek(), "Expected an equal sign '=' after term function or variable");
+            }
+        }
+        if(this.match(TokenType.IDENTIFIER)){
+            const identifier = this.previous();
+            if (this.match(TokenType.LEFT_PAREN)){
+                if (this.match(TokenType.RIGHT_PAREN)) {
+                    console.log('empty arg list');
+                    return new PredicateFunction(identifier,[]);
+                }
+                const terms = this.term_list();
+                this.consume(TokenType.RIGHT_PAREN,"Expected ')' after the arguments of a predicate");
+                return new PredicateFunction(identifier,[]);
+            }
+            return new PredicateConstant(identifier);
+        }
+        throw this.error(this.peek(), "Expected a predicate at this position");
+    }
     term_list(){
         const terms = [];
         const term = this.term();
@@ -702,6 +724,45 @@ class TermFunction extends Term {
         this.args.forEach(term => term.replaceVariableName(oldName,newName));
     }
 }
+class Predicate extends Formula {
+    constructor(name) {
+        super();
+        this.name = name; //Token
+        this.line = name.line;
+    }
+    toString(){
+        let str = '';
+        if (this.name instanceof Token){
+            str += this.name.lexeme;
+        }
+        if(this.args instanceof Array){
+            str +='('+ this.args.join() + ')';
+        }
+        return str;
+    }
+
+}
+class PredicateConstant extends Predicate {
+}
+class PredicateFunction extends Predicate {
+    constructor(name, args) {
+        super(name);
+        this.args = args; //Array Formula
+        this.line = name.line;
+    }
+    *[Symbol.iterator](){
+        for (const term of this.args){
+            yield term;
+            for (const t of term) {
+                if (t !== null)
+                    yield t;
+            }
+        }
+    }
+    replaceVariableName(oldName,newName){
+        this.args.forEach(term => term.replaceVariableName(oldName,newName));
+    }
+}
 
 class Rule {
     constructor(){
@@ -860,7 +921,7 @@ class RuleBottomElim extends Rule{
         this.source = source;
     }
     validate(formula) {
-        if (!(this.source instanceof Term)) {
+        if (!(this.source instanceof PredicateConstant)) {
             console.error('source must be a term');
             return false;
         }
@@ -896,12 +957,12 @@ class RuleBottomIntro extends Rule{
             }
         });
 
-        if (!(formula instanceof Term)) {
-            console.error('Expected formula to validate to be of type Term');
+        if (!(formula instanceof PredicateConstant)) {
+            console.error('Expected formula to validate to be of type PredicateConstant');
             return false;
         }
         if (formula.name.type !== TokenType.FALSE){
-            console.error('Expected formula to validate to be of type TermConstant Bottom/False');
+            console.error('Expected formula to validate to be of type Bottom/False');
             return false;
         }
 
@@ -1362,7 +1423,7 @@ class RuleNegationIntro extends Rule{
                 foundRightTerm = true;
         }
         for (const term of this.source.getSteps()){
-            if((term instanceof Term) && term.name.type === TokenType.FALSE)
+            if((term instanceof PredicateConstant) && term.name.type === TokenType.FALSE)
                 foundBottom = true;
         }
         if (!foundRightTerm) {
