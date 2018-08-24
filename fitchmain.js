@@ -107,11 +107,16 @@ function suggest(search) {
     console.log(search,regex)
 
     const results = new Map();
+    for (const identifier of editor.enteredIdentifiers){
+        // add alreade entered terms
+        sugg.set(identifier,identifier);
+    }
     for (const [matchstring,token] of sugg){
         if (regex.test(matchstring))
             results.set(token,[matchstring,matchstring.replace(regex,'<b>$1</b>')]);
     }
-    console.log(results)
+    console.log('match results:', results)
+
     return results;
 }
 function suggestRules(search) {
@@ -478,8 +483,17 @@ function handleKeyup(event) {
         let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
         if (searchString.length != 0){
             let results = suggest(searchString);
-            if (results.size == 0)
-                return;
+            if (results.size == 0){
+                if (searchString[0].toLowerCase() == searchString[0]){
+                    //if search string is a variable try anew
+                    // XXX FIXME
+                    searchString = searchString.substring(1);
+                    currentToken.pos++;
+                    results = suggest(searchString);
+                }
+                if (results.size == 0)
+                    return;
+            }
             if (selectionIndex < 0) {
                 selectionIndex = 0;
             } else if (selectionIndex >= results.size) {
@@ -501,7 +515,6 @@ function handleKeyup(event) {
             tooltipElem.className = 'tooltip';
             tooltipElem.innerHTML = tooltipHtml;
             document.body.append(tooltipElem);
-
             // position it below line
             const coords = that.getBoundingClientRect();
             const range = document.createRange();
@@ -509,14 +522,12 @@ function handleKeyup(event) {
             currentTokenLeft = range.getBoundingClientRect().left;
             let left = currentTokenLeft - 10;
             if (left < 0) left = 0; // don't cross the left window edge
-
             let top = coords.top + that.offsetHeight;
-            
             tooltipElem.style.left = left + 'px';
             tooltipElem.style.top = top + 'px';
             
             if ((key == 'Tab' || key == 'Enter')) {
-                console.log('set');
+                console.log('insert suggestion');
                 const suggestion = results[selectionIndex][0]; // logic symbol
                 that.textContent = that.textContent.slice(0,currentToken.pos) +  suggestion + that.textContent.slice( currentToken.pos + searchString.length);
                 tooltipElem.remove();
@@ -548,7 +559,6 @@ function handleKeydown(event) {
         handleKeydownRule(event);
         return;
     }
-    //const caretPos = getCaretPosition();
     const caretPos = editor.caretPos;
     switch (event.key) {
         case "ArrowLeft":
@@ -862,7 +872,10 @@ function handleBlur(event) {
         // remove highlights/hints 
         that.previousElementSibling.textContent = that.previousElementSibling.textContent;
     }
-    editor.checkFitchLines();
+    if (that.classList.contains('line')) {
+        editor.getLine(lineNo).setContent(that.textContent);
+    }
+    //editor.checkFitchLines();
 }
 
 function handleFocus(event) {
@@ -975,9 +988,8 @@ function SetCaretPosition(el, pos){
 
 function getCaretPosition() {
     const sel = window.getSelection();
-    if (sel) {
+    if (sel) 
         return sel.anchorOffset;
-    } 
     return -1;
 }
 
@@ -991,7 +1003,6 @@ function showCaretPos(event) {
 }
 
 
-
 function highlightOperator(lineNumber,...matches){
     const matchOperatorClassName = ' highlightOperatorOk';
     const matchFormulaClassName = ' highlightFormulaOk';
@@ -1000,7 +1011,15 @@ function highlightOperator(lineNumber,...matches){
     if (!line) return;
 
     const formula = parseLineDiv(line);
-    if (!formula) return;
+    if (!formula) {
+        console.log(fitcherror.token)
+        const errorpos = fitcherror.token.pos;
+        const errorLength = fitcherror.token.lexeme.length;
+        const term = fitcherror.token.lexeme;
+        line.innerHTML = line.textContent.substring(0,errorpos) + `<span class="wavy">${term} </span>` + line.textContent.substring(errorpos+errorLength);
+        return;
+    }
+        
 
     let matchOperator = null;
     let matchFormulas = []

@@ -30,9 +30,11 @@ class Line {
 					this.editor.enteredIdentifiers.add(token.lexeme);
 				}
 			}
-			this.formula = new Parser(this.tokens).parse();
+			if (this.content.trim() != '')
+				this.formula = new Parser(this.tokens).parse();
 		}
 		this.getDom().textContent = this.content;
+		// XXX check rule
 	}
 	setIsPremise(isPremise){
 		this.isPremise = isPremise;

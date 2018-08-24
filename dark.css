@@ -183,7 +183,8 @@ aside {
 .wavy { 
   text-decoration-line: underline;
   text-decoration-style: wavy;
-  text-decoration-color: rgb(254, 24, 24);
+  text-decoration-color: rgb(255, 69, 69);
+  color: rgb(255, 69, 69);
 }
 
 .tooltipRule {

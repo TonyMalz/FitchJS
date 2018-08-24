@@ -345,14 +345,15 @@ class Parser {
             this.checkIsAtEOF();
             return form;
         } catch (error) {
-            console.error(error);
+            fitcherror = error;
+            console.error(`'${error.message}' at line ${error.token.line} pos:${error.token.pos}`);
             return null;
         }
     }
 
     checkIsAtEOF(){
         if(this.peek().type != TokenType.EOF){
-            throw this.error(this.peek(), "Unexpected token");
+            throw this.error(this.peek(), "Unexpected end token");
         }
     }
 
@@ -360,7 +361,7 @@ class Parser {
     e5(){
         if (this.match(TokenType.LEFT_PAREN)) {
             const left = this.e0();
-            this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
+            this.consume(TokenType.RIGHT_PAREN, "Expected ')' after predicate");
             return left;
         }
         const term = this.term();
@@ -387,16 +388,16 @@ class Parser {
                 // next expect opening paranthesis or another quantifier
                 if (this.match(TokenType.LEFT_PAREN)) {
                     const right = this.e0();
-                    this.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.");
+                    this.consume(TokenType.RIGHT_PAREN, "Expected ')' after formula");
                     return new FormulaQuantified(quantifier, variable, right);
                 } 
                 if (this.peek().type == TokenType.EXISTS || this.peek().type == TokenType.FOR_ALL) {
                     const right = this.e3();
                     return new FormulaQuantified(quantifier, variable, right);
                 }
-                throw this.error(this.peek(), "Expected ( or a quantifier");
+                throw this.error(this.peek(), "Expected ( or a quantifier after a quantor");
             }
-            throw this.error(peek(),"Expected a variable after quantification.");
+            throw this.error(peek(),"Expected a variable after quantification");
         }
         return this.e4();
     }
@@ -459,12 +460,12 @@ class Parser {
                     return new TermFunction(identifier,[]);
                 }
                 const terms = this.term_list();
-                this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list.");
+                this.consume(TokenType.RIGHT_PAREN,"Expected ')' after argument list");
                 return new TermFunction(identifier,terms);
             }
             return new TermVariable(identifier);
         }
-        throw this.error(this.peek(), "Expected a term.");
+        throw this.error(this.peek(), "Expected a predicate or formula at this position");
     }
 
     term_list(){
@@ -1674,6 +1675,7 @@ class Proof {
     }
 }
 let gLineNo = 0;
+let fitcherror = null;
 function parseLine(text){
     return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
 }
