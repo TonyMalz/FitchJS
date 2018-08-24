@@ -194,6 +194,8 @@ class Editor {
 		}
 		else
 			this.numSteps--;
+
+		this.checkFitchLines();
 		// const line = this.getLineByNumber(lineNumber);
 		// if (lineNumber == 1 && this.numberOfLines == 1) {
 		// 	// only remove contents if it is the only line left
@@ -209,7 +211,7 @@ class Editor {
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
-		this.checkFitchLines();
+		
 		// return next line 
 		return this.getLineByNumber(lineNumber);
 	}

@@ -762,39 +762,35 @@ function handleKeydown(event) {
           break;
         case "r":
             //jump to rule selection
-          console.log('r',lineNo,event);
-          if (that.textContent.trim().length > 0 && event.ctrlKey === true ) {
+            console.log('r',lineNo);
+            if (that.textContent.trim().length > 0 && event.ctrlKey === true ) {
                 console.log('jump to rule');
                 if(that.nextElementSibling) {
                     that.nextElementSibling.focus();
                 }
             break;
-          }
-          if (!event.ctrlKey)
-            return;
-          break;
+            }
+            if (event.ctrlKey)
+                return;
         case "d":
-        //delete current line
-          console.log('d',lineNo,event);
-          if (lineNo > 0 && event.ctrlKey === true ) {
-            console.log('delete line');
-            const next = editor.removeLine(lineNo);
-            if (next !== null)
-                SetCaretPosition(next,editor.caretPos);
-            break;
-          } 
-          if (!event.ctrlKey)
-            return;
-          break;
+            //delete current line
+            console.log('d',lineNo);
+            if (lineNo > 0 && event.ctrlKey === true ) {
+                console.log('delete line');
+                const next = editor.removeLine(lineNo);
+                if (next !== null)
+                    SetCaretPosition(next,editor.caretPos);
+                break;
+            } 
         default:
-            if (event.ctrlKey || event.shiftKey)
+            if (event.ctrlKey || event.key == 'Shift')
                 return;
             
             const sel = window.getSelection();
             if (sel.type === 'None')
                 return;
-            const range = sel.getRangeAt(0);
             if (sel.type === 'Range') {
+                const range = sel.getRangeAt(0);
                 // if a range was selected and any character was typed
                 if(editor.selectedLines !== null && editor.selectedLines.length == 1){
                     range.deleteContents();
