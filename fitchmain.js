@@ -65,15 +65,15 @@ function handleMouse(event) {
     }
 }
 
-const sugg = new Map();
-sugg.set("∧ And", '∧');
-sugg.set("v Or", '∨');
-sugg.set("¬ Not", '¬');
-sugg.set("∀ For All", '∀');
-sugg.set("-> Implication", '→');
-sugg.set("<-> Bi-Implication", '↔');
-sugg.set("∃ Exists", '∃');
-sugg.set("⊥ Bottom", '⊥');
+const suggestTokens = new Map();
+suggestTokens.set("∧ And", '∧');
+suggestTokens.set("v Or", '∨');
+suggestTokens.set("¬ Not", '¬');
+suggestTokens.set("∀ For All", '∀');
+suggestTokens.set("-> Implication", '→');
+suggestTokens.set("<-> Bi-Implication", '↔');
+suggestTokens.set("∃ Exists", '∃');
+suggestTokens.set("⊥ Bottom", '⊥');
 
 const suggestrules = new Map();
 suggestrules.set("∧ And Intro", '∧ Intro:');
@@ -109,9 +109,9 @@ function suggest(search) {
     const results = new Map();
     for (const identifier of editor.enteredIdentifiers){
         // add alreade entered terms
-        sugg.set(identifier,identifier);
+        suggestTokens.set(identifier,identifier);
     }
-    for (const [matchstring,token] of sugg){
+    for (const [matchstring,token] of suggestTokens){
         if (regex.test(matchstring))
             results.set(token,[matchstring,matchstring.replace(regex,'<b>$1</b>')]);
     }
@@ -196,7 +196,9 @@ function handleKeydownRule(event){
                 ruleSelected = false;
             } else if (that.textContent.trim() == '') {
                 // go back to end of line
-                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
+                const line = editor.getLine(lineNo);
+                line.setContent(line.content);//strip HTML
+                SetCaretPosition(line,line.content.length);
             } else {
                 return;
             }
@@ -207,7 +209,10 @@ function handleKeydownRule(event){
             }
             if(event.shiftKey){
                  // go back to end of line
-                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
+                console.log('go back to end of line')
+                const line = editor.getLine(lineNo);
+                line.setContent(line.content);//strip HTML
+                SetCaretPosition(line,line.content.length);
             }
             break;
         case "r":
@@ -318,7 +323,7 @@ function handleKeyupRule(event) {
                     const rule = new RuleAndIntro(...lines);
                     const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
                     if (currentLine) {
-                        highlightOperator(lineNo,TokenType.AND,...lines);
+                        highlightFormulaParts(lineNo,TokenType.AND,...lines);
                         currentLine.setRule(rule);
                         if (currentLine.check()) {
                             that.classList.add('ruleOk');
@@ -402,7 +407,7 @@ function handleKeyupRule(event) {
                 tooltipElem = null;
                 selectionIndex = 0;
                 ruleSelected = true;
-                highlightOperator(lineNo,TokenType.AND);
+                highlightFormulaParts(lineNo,TokenType.AND);
                 SetCaretPosition(that,currentToken.pos + suggestion.length);
             }
             if (key == 'Escape') {
@@ -635,25 +640,24 @@ function handleKeydown(event) {
             tabProcessed = true;
             break;
           }
-          let indentLevel = that.dataset.level;
+          const line = editor.getLine(lineNo);
+          let indentLevel = line.level;
           if (event.shiftKey == true){
             if (indentLevel > 0)
                 //close subproof
-                that.style.textIndent = (--indentLevel * indentAmount) + 'px';
+                line.setLevel(--indentLevel);
           } else {
-                //open subproof
+                // check level of previous line
                 const levelPrevLine = (lineNo > 1) ? editor.getLineByNumber(lineNo-1).dataset.level : 0;
                 if (levelPrevLine < indentLevel) {
                     //do nothing since only one subproof level is allowed
                     tabProcessed = true;
                     break;
                 }
-                that.style.textIndent = (++indentLevel * indentAmount) + 'px';
+                //open subproof
+                line.setLevel(++indentLevel);
           }
-          that.dataset.level = indentLevel;
-          that.style.zIndex = parseInt(100 - that.dataset.level);
           tabProcessed = true;
-          editor.checkFitchLines();
           break;
         case "Backspace":
             {
@@ -662,32 +666,31 @@ function handleKeydown(event) {
                 if (sel.type === "Caret") {
                     const range = sel.getRangeAt(0);
                     if (range.startOffset == 0) {
-                        let indentLevel = that.dataset.level;
-                        // subproof
+                        const line = editor.getLine(lineNo);
+                        let indentLevel = line.level;
+                        // close subproof
                         if (indentLevel > 0){
-                            that.style.textIndent = (--indentLevel * indentAmount) + 'px';
-                            that.dataset.level = indentLevel;
-                            that.style.zIndex = parseInt(100 - that.dataset.level);
-                            editor.checkFitchLines();
+                            line.setLevel(--indentLevel);
                             return;
                         } else {
                            if (lineNo > 0) {
                                 const text = that.textContent;
                                 editor.removeLine(lineNo);
-                                const next = document.getElementById('l'+(lineNo - 1));
-                                const cursorPos = next.textContent.length;
-                                next.textContent += text;
+                                const next = editor.getLine(lineNo - 1);
+                                const cursorPos = next.content.length;
+                                next.setContent(next.content + text);
                                 SetCaretPosition(next, cursorPos);
                                 // event handled, don't delete any character on next line!
                                 break;
                             }
                         }
                     } else {
+                        // if cursor was not at the beginnig of the current line
                         return;
                     }
                 }
             }
-          //break; intentionally Fall through to delete...
+          //break; intentionally Fall through to delete for user selections...
         case "Delete":
           console.log('Delete');
           {
@@ -764,10 +767,8 @@ function handleKeydown(event) {
           if (that.textContent.trim().length > 0 && event.ctrlKey === true ) {
                 console.log('jump to rule');
                 if(that.nextElementSibling) {
-                    that.textContent = that.textContent.trim();
                     that.nextElementSibling.focus();
                 }
-
             break;
           }
           if (!event.ctrlKey)
@@ -875,7 +876,7 @@ function handleBlur(event) {
     if (that.classList.contains('line')) {
         editor.getLine(lineNo).setContent(that.textContent);
     }
-    //editor.checkFitchLines();
+    editor.checkFitchLines();
 }
 
 function handleFocus(event) {
@@ -883,7 +884,7 @@ function handleFocus(event) {
     const that = event.target;
     const lineNo = that.dataset.lineNumber;
     if (that.classList.contains('rule')) {
-        highlightOperator(lineNo)
+        highlightFormulaParts(lineNo)
         //if rule was already selected, start at end
         if (that.textContent.length > 0){
             const indexColon = that.textContent.indexOf(':');
@@ -899,6 +900,7 @@ function handleFocus(event) {
     if (that.classList.contains('line')) {
         // reset styling to plain text (strip tags)
         that.textContent = that.textContent;
+        editor.selectedLines = [that];
     }
 }
 
@@ -1003,7 +1005,7 @@ function showCaretPos(event) {
 }
 
 
-function highlightOperator(lineNumber,...matches){
+function highlightFormulaParts(lineNumber,...matches){
     const matchOperatorClassName = ' highlightOperatorOk';
     const matchFormulaClassName = ' highlightFormulaOk';
 

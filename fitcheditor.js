@@ -43,11 +43,12 @@ class Line {
 		this.editor.updateFitchlines();
 	}
 	setLevel(level){
-		this.level = 0;
+		this.level = level;
 		this.getDom();
 		this.DomElement.style.textIndent = (this.level * indentAmount) + 'px';//XXX FIXME
         this.DomElement.dataset.level = this.level;
         this.DomElement.style.zIndex = parseInt(100 - this.level);
+        this.editor.checkFitchLines();
 	}
 	getDom(){
 		if (this.DomElement)
@@ -115,8 +116,8 @@ class Editor {
 		// add line to editor
 		const line = new Line(this);
 		line.lineNumber = lineNo;
-		line.level = 0;
 		line.setContent(text);
+		line.setLevel(level);
 		line.setIsPremise(isPremise);
 		this.lines.push(line);
 		
@@ -155,10 +156,10 @@ class Editor {
 	addEmptyLineAfter(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return;
-		// get new line number
-		if (this.getLine(lineNumber).isPremise)
+		const prevLine = this.getLine(lineNumber);
+		if (prevLine.isPremise)
 			return this.addPremise('',++lineNumber);
-		return this.addLine('',++lineNumber);
+		return this.addLine('',++lineNumber,false,prevLine.level);
 	}
 	addNewLineBefore(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
@@ -190,7 +191,6 @@ class Editor {
 		this.updateAllLineNumbers();
 		if (line.isPremise){
 			this.numPremises--;
-			this.updateFitchlines();
 		}
 		else
 			this.numSteps--;
@@ -209,6 +209,7 @@ class Editor {
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
+		this.checkFitchLines();
 		// return next line 
 		return this.getLineByNumber(lineNumber);
 	}
