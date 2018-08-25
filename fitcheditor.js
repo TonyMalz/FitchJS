@@ -4,12 +4,14 @@ class Line {
 		this.editor = editor;
 		this.level = 0; // greater 0 means it is a subproof
 		this.lineNumber;
-		this.content; // raw text 
+		this.content = ''; // raw text 
 		this.tokens;  // text tokens
 		this.formula; // parsed formula if valid content exists
 		this.rule;    // rule selection element
 		this.isPremise = false;
 		this.DomElement = null;
+		this.formattedContent = '';; // html content XXX really needed?
+		this.error = null;
 	}
 	setLineNumber(lineNumber){
 		const element = this.getDom();
@@ -23,18 +25,89 @@ class Line {
 	}
 	setContent(content){
 		this.content = content;
-		if (content != '') {
-			this.tokens = new Scanner(content,this.lineNumber).scanTokens();
-			for (const token of this.tokens) {
-				if(token.type === TokenType.IDENTIFIER){
-					this.editor.enteredIdentifiers.add(token.lexeme);
-				}
+		this.tokens = new Scanner(content,this.lineNumber).scanTokens();
+		for (const token of this.tokens) {
+			if(token.type === TokenType.IDENTIFIER){
+				this.editor.enteredIdentifiers.add(token.lexeme);
 			}
-			if (this.content.trim() != '')
-				this.formula = new Parser(this.tokens).parse();
 		}
+		if (this.content.trim() != ''){
+			this.formula = new Parser(this.tokens).parse();
+			if (!this.formula)
+				this.error = fitcherror;//XXX
+		}
+
+		this.formattedContent = this.highlightTokens();
+
 		this.getDom().textContent = this.content;
+		//this.getDom().innerHTML = this.formattedContent;
 		// XXX check rule
+	}
+	highlightTokens() {
+		let content = this.content;
+		let offset = 0;
+		for (const token of this.tokens){
+			let cssClass=null;
+			switch(token.type){
+				case TokenType.AND:
+					cssClass = 'tokenAnd';
+					break;
+				case TokenType.OR:
+					cssClass = 'tokenOr';
+					break;
+				case TokenType.NOT:
+					cssClass = 'tokenNot';
+					break;
+				case TokenType.FALSE:
+					cssClass = 'tokenFalse';
+					break;
+				case TokenType.IMPL:
+					cssClass = 'tokenImpl';
+					break;
+				case TokenType.BI_IMPL:
+					cssClass = 'tokenBiImpl';
+					break;
+				case TokenType.FOR_ALL:
+					cssClass = 'tokenForall';
+					break;
+				case TokenType.EXISTS:
+					cssClass = 'tokenExists';
+					break;
+				case TokenType.COMMA:
+					cssClass = 'tokenComma';
+					break;
+				case TokenType.LEFT_PAREN:
+				case TokenType.RIGHT_PAREN:
+					cssClass = 'tokenParen';
+					break;
+				case TokenType.EQUAL:
+					cssClass = 'tokenEqual';
+					break;
+				case TokenType.IDENTIFIER:
+					if (token.lexeme[0] === token.lexeme[0].toLowerCase()){
+						cssClass = 'tokenTerm';
+					} else {
+						cssClass = 'tokenPremise'
+					}
+					break;
+			}
+			
+			if (cssClass) {
+				const insert = `<span class='${cssClass}'>${token.lexeme}</span>`;
+				const insertPos = token.pos + offset;
+				const tokenLength = token.lexeme.length;
+				content = content.substring(0,insertPos) + insert + content.substring(insertPos+tokenLength);
+				offset += insert.length - tokenLength;
+			}
+		}
+		return content;
+	}
+	setSyntaxHighlighting(on){
+		if (on) {
+			this.getDom().innerHTML = this.formattedContent;
+		} else {
+			this.getDom().textContent = this.content;
+		}
 	}
 	setIsPremise(isPremise){
 		this.isPremise = isPremise;
@@ -145,6 +218,11 @@ class Editor {
 			lastPremise.getDom().classList.add('fitchline');
 		}
 	}
+	setSyntaxHighlighting(on){
+		for (const line of this.lines){
+			line.setSyntaxHighlighting(on);
+		}
+	}
 	getLine(lineNumber) {
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return null;
@@ -157,7 +235,7 @@ class Editor {
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return;
 		const prevLine = this.getLine(lineNumber);
-		if (prevLine.isPremise)
+		if (prevLine && prevLine.isPremise)
 			return this.addPremise('',++lineNumber);
 		return this.addLine('',++lineNumber,false,prevLine.level);
 	}
@@ -239,7 +317,7 @@ class Editor {
         this.numberOfLines = lines.length;
 	}
 	getLineByNumber(lineNumber){
-		return document.getElementById('l'+lineNumber);
+		return document.getElementById('l'+parseInt(lineNumber));
 	}
 	getLineTemplate(lineNumber,content, isPremise=false){
 		const premiseClass = isPremise ? ' premise' : '';

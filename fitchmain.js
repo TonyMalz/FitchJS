@@ -3,7 +3,11 @@
 let mousedown = null;
 function handleMouse(event) {
     console.log(event)
-    const that = event.target;
+    let that = event.target;
+    if (that.nodeName == 'SPAN'){
+        console.log('span clicked')
+        that = event.target.parentNode;
+    }
     if (tooltipElem) {
         tooltipElem.remove();
         tooltipElem = null;
@@ -37,18 +41,17 @@ function handleMouse(event) {
                 // only update if a line was selected
                 if (that.classList.contains('line') || that.parentNode.classList.contains('line')){
                     that.contentEditable = 'true';
-                    that.focus();
-                    editor.selectedLines = [that];
+                    const lineNo = parseInt(that.dataset.lineNumber);
+                    const line = editor.getLine(lineNo);
+                    const caretPos = getHtmlCaretPos(that)
+        
+                    line.setSyntaxHighlighting(false);
+                    SetCaretPosition(that,caretPos);
                     console.log(editor.selectedLines)
-                    const sel = window.getSelection();
-                    if (sel.type === "Caret") {
-                        const range = sel.getRangeAt(0);
-                        editor.caretPos = range.startOffset;
-                        console.log(editor.caretPos)
-                    }
-                    editor.activeLine = that;
+                    showCaretPos(event);
                 } 
             }
+
             const sel = window.getSelection()
             if (sel.type === 'Range') {
                 const range = sel.getRangeAt(0)
@@ -568,8 +571,8 @@ function handleKeydown(event) {
         case "ArrowLeft":
           console.log('left',lineNo);
           if (lineNo > 1 && caretPos === 0) {
-            const next = editor.getLineByNumber(lineNo-1);
-            SetCaretPosition(next,next.textContent.length);
+            const next = editor.getLine(lineNo-1);
+            SetCaretPosition(next,next.content.length);
           } else {
             return;
           }
@@ -577,7 +580,7 @@ function handleKeydown(event) {
         case "ArrowRight":
           console.log('right',lineNo);
           if (lineNo < editor.numberOfLines && caretPos === that.textContent.length) {
-            const next = editor.getLineByNumber(lineNo+1);
+            const next = editor.getLine(lineNo+1);
             SetCaretPosition(next,0);
           } else {
             return;
@@ -589,7 +592,7 @@ function handleKeydown(event) {
             }
           console.log('down',lineNo);
           if (lineNo < editor.numberOfLines) {
-            const next = editor.getLineByNumber(lineNo+1);
+            const next = editor.getLine(lineNo+1);
             SetCaretPosition(next,editor.caretPos);
           } else {
             //add new line if in last line
@@ -603,7 +606,7 @@ function handleKeydown(event) {
           }
           console.log('up', lineNo);
           if (lineNo > 1) {
-            const next = editor.getLineByNumber(lineNo-1);
+            const next = editor.getLine(lineNo-1);
             SetCaretPosition(next,editor.caretPos);
           }
           break;
@@ -633,7 +636,6 @@ function handleKeydown(event) {
           if(that.textContent.trim().length > 0 && caretPos == that.textContent.length){
             console.log('jump to rule selection')
             if(that.nextElementSibling) {
-                that.textContent = that.textContent.trim();
                 that.nextElementSibling.focus();
             }
             tabProcessed = true;
@@ -701,36 +703,65 @@ function handleKeydown(event) {
                 if (editor.selectedLines !== null && editor.selectedLines.length > 1) {
                     console.log(editor.selectedLines)
                     // only delete selection
+                    const startLine = editor.getLine(editor.selectedLines[0].dataset.lineNumber);
+                    const caretPos = getHtmlCaretPos(startLine.getDom());
                     range.deleteContents();
-                    // XXX add deleted rule selection
                     const firstLineId = editor.selectedLines[0].id;
                     const firstLineAfterDeletion = document.getElementById(firstLineId);
+                    const lastLineId = editor.selectedLines[editor.selectedLines.length-1].id;
+                    const lastLineAfterDeletion = document.getElementById(lastLineId);
                     if (!firstLineAfterDeletion.nextElementSibling && editor.selectedLines[0].nextElementSibling){
                         // if rule selection is missing, add it again
                         firstLineAfterDeletion.parentNode.append(editor.selectedLines[0].nextElementSibling);
                     }
-                    let removeLines = [];
+
+                    let removedLines = [];
                     editor.selectedLines.forEach(line => {
                         const lineNo = parseInt(line.dataset.lineNumber);
                         if (lineNo == 1)
                             return;
                         const lineAfterEdit = editor.getLineByNumber(lineNo);
-                        if (lineAfterEdit !== null && lineAfterEdit.textContent.trim().length == 0) {
+                        if (!lineAfterEdit || lineAfterEdit.textContent.trim().length == 0) {
                             editor.removeLine(lineNo)
+                            removedLines.push(lineNo);
                         }
                     });
-                    editor.updateLineNumbers();
-                    const startLine = editor.getLineByNumber(editor.selectedLines[0].dataset.lineNumber);
-                    SetCaretPosition(startLine,range.startOffset);
-                } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
-                    range.deleteContents();
-                    const firstLineId = editor.selectedLines[0].id;
-                    const firstLineAfterDeletion = document.getElementById(firstLineId);
-                    if (!firstLineAfterDeletion.nextElementSibling){
-                        // if rule selection is missing, add it again
-                        firstLineAfterDeletion.parentNode.append(editor.selectedLines[0].nextElementSibling);
+
+                    const lastLineNo = parseInt(editor.selectedLines[editor.selectedLines.length-1].dataset.lineNumber);
+                    if (removedLines.length == editor.selectedLines.length){
+                        //all selected lines have been removed
+                        //focus next line after last selected line
+                        let nextLineNo = lastLineNo + 1;
+                        if (nextLineNo > editor.numberOfLines){
+                            //select line before first selected line
+                            nextLineNo = startLine.lineNumber - 1;
+                            if (nextLineNo < 1)
+                                nextLineNo = 1;
+                            const line = editor.getLine(nextLineNo);
+                            SetCaretPosition(line,line.content.length);
+                        } else {
+                            const line = editor.getLine(nextLineNo);
+                            SetCaretPosition(line,0);
+                        }
+                    } else {
+                        if (firstLineAfterDeletion){
+                            startLine.setContent(firstLineAfterDeletion.textContent);
+                        } 
+                        if (lastLineAfterDeletion) {
+                            const line = editor.getLine(lastLineNo - removedLines.length);
+                            line.setContent(lastLineAfterDeletion.textContent);
+                            SetCaretPosition(line,0);
+                        } else {
+                            SetCaretPosition(startLine,caretPos);
+                        }
                     }
-                    SetCaretPosition(editor.selectedLines[0],range.startOffset);
+                } else if(editor.selectedLines !== null && editor.selectedLines.length == 1){
+                    const lineNo = parseInt(editor.selectedLines[0].dataset.lineNumber);
+                    const line = editor.getLine(lineNo)
+                    const caretPos = getHtmlCaretPos(editor.selectedLines[0]);
+                    range.deleteContents();
+                    line.setContent(editor.selectedLines[0].textContent);
+                    SetCaretPosition(line,caretPos);
                 } else {
                     return;
                 }
@@ -793,8 +824,12 @@ function handleKeydown(event) {
                 const range = sel.getRangeAt(0);
                 // if a range was selected and any character was typed
                 if(editor.selectedLines !== null && editor.selectedLines.length == 1){
+                    const lineNo = editor.selectedLines[0].dataset.lineNumber;
+                    const caretPos = getHtmlCaretPos(editor.selectedLines[0]);
                     range.deleteContents();
-                    SetCaretPosition(editor.selectedLines[0],range.startOffset);
+                    const line = editor.getLine(lineNo);
+                    line.setContent(editor.getLineByNumber(lineNo).textContent);
+                    SetCaretPosition(line,caretPos);
                 } 
             }
           return; // Quit when this doesn't handle the key event.
@@ -865,11 +900,14 @@ function handleBlur(event) {
         if(that.textContent.trim() == ''){
             that.textContent='';
         }
-        // remove highlights/hints 
-        that.previousElementSibling.textContent = that.previousElementSibling.textContent;
+        // remove highlights/hints
+        const line = editor.getLine(lineNo);
+        line.setSyntaxHighlighting(false);
     }
     if (that.classList.contains('line')) {
-        editor.getLine(lineNo).setContent(that.textContent);
+        const line = editor.getLine(lineNo);
+        line.setContent(that.textContent);
+        line.setSyntaxHighlighting(true);
     }
     editor.checkFitchLines();
 }
@@ -893,11 +931,10 @@ function handleFocus(event) {
         }
     }
     if (that.classList.contains('line')) {
-        // reset styling to plain text (strip tags)
-        that.textContent = that.textContent;
         editor.selectedLines = [that];
     }
 }
+
 
 const editor = new Editor();
 window.addEventListener("load", function(){
@@ -916,6 +953,10 @@ window.addEventListener("load", function(){
     editor.addPremise('Peter');
     editor.addPremise('Leo');
     editor.addLine('Peter ∧ Leo');
+    editor.addLine('∀x∀y(Peter(x,y) ∧ Hans(y)) → ∃z(Leo(z))');
+    editor.addLine('¬∀x∀y(Peter(x) ∧ Hans(y)) → ∃z(Leo(z))');
+    editor.addLine('hans = peter');
+    editor.setSyntaxHighlighting(true);
 });
 
 
@@ -949,6 +990,7 @@ function SetCaretPosition(el, pos){
     if (!el)
         return -1;
     if (el instanceof Line){
+        el.setSyntaxHighlighting(false);
         el = el.getDom();
     }
     if (el.classList.contains('line')){
@@ -981,6 +1023,21 @@ function SetCaretPosition(el, pos){
         }
     }
     return pos; // needed because of recursion stuff
+}
+
+
+function getHtmlCaretPos(element){
+    const range = window.getSelection().getRangeAt(0);
+    const copyRange = range.cloneRange();
+    copyRange.selectNodeContents(element);
+    copyRange.setEnd(range.endContainer, range.endOffset);
+    const endPos = copyRange.toString().trimStart().length;
+    if (range.collapsed)
+        return endPos;
+    //a range was selected, get start position
+    copyRange.setEnd(range.startContainer, range.startOffset);
+    const startPos = copyRange.toString().trimStart().length;
+    return startPos < endPos ? startPos : endPos;
 }
 
 function getCaretPosition() {

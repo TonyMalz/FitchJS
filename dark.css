@@ -12,8 +12,9 @@ main
 {
     grid-area: a;
     font-family: "Consolas";
+    text-shadow: 1px 1px 2px #030303;
     font-size: 1.3em;
-    color: rgba(113, 182, 255, 1);
+    color: #effcff;
     margin: 20px;
     outline: 0;
     overflow: hidden;
@@ -49,9 +50,9 @@ aside {
 .row {
     display: grid;
     grid-gap: 25px;
-    grid-template-columns: minmax(350px,auto) minmax(100px, 200px) auto;
+    grid-template-columns: 600px 200px auto;
     grid-template-rows: max-content;
-    grid-template-areas: "line rule . ";
+    grid-template-areas: "line rule .";
 }
 
 .line
@@ -68,6 +69,7 @@ aside {
     height: 1em;
     background-color: #2e2e2e;
     z-index: 100;
+    transition: .15s;
 }
 .line::before {
     display: inline-block;
@@ -133,6 +135,7 @@ aside {
     content: attr(placeholder);
     display: block;
     color: rgba(222, 184, 135, 0.15);
+    text-shadow: none;
 }
 .ruleOk {
     border: 1px solid rgba(76, 175, 80, 0.79);
@@ -256,10 +259,32 @@ aside {
 }
 
 .highlightOperatorOk {
-    color: #02ff00;
+    color:  #a6e22e;
     border: 1px transparent;
 }
 .highlightFormulaOk {
     border: 1px transparent;
-    color: #02ff00;
+    color:  #a6e22e;
+}
+
+.tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenEqual {
+    color: #f92672;
+}
+
+.tokenForall, .tokenExists {
+    color: #fd971f;
+}
+.tokenNot {
+    color: #ae81ff;
+}
+
+.tokenTerm {
+    color: #fd971f;
+}
+
+.tokenPremise, .tokenFalse {
+    color: #effcff;
+}
+.tokenParen, .tokenComma {
+    color: #7d7d7d;
 }
