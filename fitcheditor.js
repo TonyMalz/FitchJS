@@ -10,7 +10,7 @@ class Line {
 		this.rule;    // rule selection element
 		this.isPremise = false;
 		this.DomElement = null;
-		this.formattedContent = '';; // html content XXX really needed?
+		this.formattedContent = ''; // html content XXX really needed?
 		this.error = null;
 	}
 	setLineNumber(lineNumber){
@@ -43,55 +43,58 @@ class Line {
 		//this.getDom().innerHTML = this.formattedContent;
 		// XXX check rule
 	}
+	getTokenCssClass(token){
+		let cssClass='';
+		switch(token.type){
+			case TokenType.AND:
+				cssClass = 'tokenAnd';
+				break;
+			case TokenType.OR:
+				cssClass = 'tokenOr';
+				break;
+			case TokenType.NOT:
+				cssClass = 'tokenNot';
+				break;
+			case TokenType.FALSE:
+				cssClass = 'tokenFalse';
+				break;
+			case TokenType.IMPL:
+				cssClass = 'tokenImpl';
+				break;
+			case TokenType.BI_IMPL:
+				cssClass = 'tokenBiImpl';
+				break;
+			case TokenType.FOR_ALL:
+				cssClass = 'tokenForall';
+				break;
+			case TokenType.EXISTS:
+				cssClass = 'tokenExists';
+				break;
+			case TokenType.COMMA:
+				cssClass = 'tokenComma';
+				break;
+			case TokenType.LEFT_PAREN:
+			case TokenType.RIGHT_PAREN:
+				cssClass = 'tokenParen';
+				break;
+			case TokenType.EQUAL:
+				cssClass = 'tokenEqual';
+				break;
+			case TokenType.IDENTIFIER:
+				if (token.lexeme[0] === token.lexeme[0].toLowerCase()){
+					cssClass = 'tokenTerm';
+				} else {
+					cssClass = 'tokenPremise'
+				}
+				break;
+		}
+		return cssClass;
+	}
 	highlightTokens() {
 		let content = this.content;
 		let offset = 0;
 		for (const token of this.tokens){
-			let cssClass=null;
-			switch(token.type){
-				case TokenType.AND:
-					cssClass = 'tokenAnd';
-					break;
-				case TokenType.OR:
-					cssClass = 'tokenOr';
-					break;
-				case TokenType.NOT:
-					cssClass = 'tokenNot';
-					break;
-				case TokenType.FALSE:
-					cssClass = 'tokenFalse';
-					break;
-				case TokenType.IMPL:
-					cssClass = 'tokenImpl';
-					break;
-				case TokenType.BI_IMPL:
-					cssClass = 'tokenBiImpl';
-					break;
-				case TokenType.FOR_ALL:
-					cssClass = 'tokenForall';
-					break;
-				case TokenType.EXISTS:
-					cssClass = 'tokenExists';
-					break;
-				case TokenType.COMMA:
-					cssClass = 'tokenComma';
-					break;
-				case TokenType.LEFT_PAREN:
-				case TokenType.RIGHT_PAREN:
-					cssClass = 'tokenParen';
-					break;
-				case TokenType.EQUAL:
-					cssClass = 'tokenEqual';
-					break;
-				case TokenType.IDENTIFIER:
-					if (token.lexeme[0] === token.lexeme[0].toLowerCase()){
-						cssClass = 'tokenTerm';
-					} else {
-						cssClass = 'tokenPremise'
-					}
-					break;
-			}
-			
+			const cssClass = this.getTokenCssClass(token);
 			if (cssClass) {
 				const insert = `<span class='${cssClass}'>${token.lexeme}</span>`;
 				const insertPos = token.pos + offset;
@@ -238,11 +241,6 @@ class Editor {
 		if (prevLine && prevLine.isPremise)
 			return this.addPremise('',++lineNumber);
 		return this.addLine('',++lineNumber,false,prevLine.level);
-	}
-	addNewLineBefore(lineNumber){
-		if (lineNumber > this.numberOfLines || lineNumber < 1)
-			return;
-		
 	}
 	removeCurrentLine(){
 		this.removeLine(this.currentLine)

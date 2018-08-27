@@ -1,5 +1,4 @@
 
-
 let mousedown = null;
 function handleMouse(event) {
     console.log(event)
@@ -172,8 +171,15 @@ function handleKeydownRule(event){
             if (tooltipElem){
                 break;
             }
-            const next = editor.addEmptyLineAfter(lineNo);
-            SetCaretPosition(next,0);
+            if (lineNo == editor.numberOfLines){
+                // add new line if rule is in last line
+                const next = editor.addEmptyLineAfter(lineNo);
+                SetCaretPosition(next,0);
+            } else {
+                const next = editor.getLine(lineNo+1);
+                SetCaretPosition(next,0);
+            }
+            
             enterProcessed = true;
             break;
         case "ArrowDown":
@@ -181,7 +187,7 @@ function handleKeydownRule(event){
               break;
             }
             if (lineNo < editor.numberOfLines) {
-                const next = document.getElementById('l'+(lineNo + 1));
+                const next = editor.getLine(lineNo + 1);
                 SetCaretPosition(next,editor.caretPos);
             }
             break;
@@ -190,7 +196,7 @@ function handleKeydownRule(event){
                 break;
             }
             if (lineNo > 1) {
-                const next = document.getElementById('l'+(lineNo - 1));
+                const next = editor.getLine(lineNo - 1);
                 SetCaretPosition(next,editor.caretPos);
             }
             break;
@@ -199,7 +205,8 @@ function handleKeydownRule(event){
                 //do not allow past colon
             } else if (that.textContent.trim() == '') {
                 // go back to end of line
-                SetCaretPosition(that.previousElementSibling,that.previousElementSibling.textContent.length);
+                const line = editor.getLine(lineNo);
+                SetCaretPosition(line,line.content.length);
             } else {
                 return
             }
@@ -227,7 +234,6 @@ function handleKeydownRule(event){
                  // go back to end of line
                 console.log('go back to end of line')
                 const line = editor.getLine(lineNo);
-                line.setContent(line.content);//strip HTML
                 SetCaretPosition(line,line.content.length);
             }
             break;
@@ -438,13 +444,13 @@ function handleKeyupRule(event) {
 function handleKeyup(event) {
     editor.caretPos = getCaretPosition();
     caretPos = editor.caretPos;
-    showCaretPos(event);
     const key = event.key;
     const that = event.target;
     if (that.classList.contains('rule')) {
         handleKeyupRule(event);
         return;
     }
+    showCaretPos(event);
     const lineNo = parseInt(that.dataset.lineNumber);
 
     // get token under caret position
@@ -922,10 +928,11 @@ function handleBlur(event) {
         }
         // remove highlights/hints
         const line = editor.getLine(lineNo);
-        line.setSyntaxHighlighting(false);
+        line.setSyntaxHighlighting(true);
     }
     if (that.classList.contains('line')) {
         const line = editor.getLine(lineNo);
+        //update content based on text changes
         line.setContent(that.textContent);
         line.setSyntaxHighlighting(true);
     }
@@ -1100,17 +1107,18 @@ function showCaretPos(event) {
 function highlightFormulaParts(lineNumber,...matches){
     const matchOperatorClassName = ' highlightOperatorOk';
     const matchFormulaClassName = ' highlightFormulaOk';
-
-    const line = editor.getLineByNumber(lineNumber);
+    const line = editor.getLine(lineNumber);
+    
     if (!line) return;
 
-    const formula = parseLineDiv(line);
+    const domLine = editor.getLineByNumber(lineNumber);
+    const formula = line.formula;
     if (!formula) {
         console.log(fitcherror.token)
         const errorpos = fitcherror.token.pos;
         const errorLength = fitcherror.token.lexeme.length;
         const term = fitcherror.token.lexeme;
-        line.innerHTML = line.textContent.substring(0,errorpos) + `<span class="wavy">${term} </span>` + line.textContent.substring(errorpos+errorLength);
+        domLine.innerHTML = domLine.textContent.substring(0,errorpos) + `<span class="wavy">${term} </span>` + domLine.textContent.substring(errorpos+errorLength);
         return;
     }
         
@@ -1131,7 +1139,7 @@ function highlightFormulaParts(lineNumber,...matches){
         const connective = formula.connective;
         const offset = connective.pos;
         const length = connective.lexeme.length;
-        const content = line.textContent;
+        const content = domLine.textContent;
         const before = content.substring(0,offset);
         const after =  content.substring(offset+length);
         const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
@@ -1147,11 +1155,12 @@ function highlightFormulaParts(lineNumber,...matches){
             }
         }
         const formMatch = foundForm ? matchFormulaClassName : '';
-        line.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+        const tokenCss = line.getTokenCssClass(connective);
+        domLine.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch} ${tokenCss}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
     } else if (formula.connectives) {
         // and / or
         let html = '';
-        let content = line.textContent;
+        let content = domLine.textContent;
         let i = 0;
         // FIXME odd number of connectors
         for (const connective of formula.connectives){
@@ -1171,7 +1180,8 @@ function highlightFormulaParts(lineNumber,...matches){
                 }
             }
             const formMatch = foundForm ? matchFormulaClassName : '';
-            html += `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch}'>${connective.lexeme}</span>`;
+            const tokenCss = line.getTokenCssClass(connective);
+            html += `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch} ${tokenCss}'>${connective.lexeme}</span>`;
             i = offset + length;
             content = content.substring(i);
         }
@@ -1187,27 +1197,29 @@ function highlightFormulaParts(lineNumber,...matches){
             }
         }
         const formMatch = foundForm ? matchFormulaClassName : '';
-        html += `<span class='connectivePart${formMatch}'>${content}</span>`;
-        line.innerHTML = html;
+        html += `<span class='connectivePart${formMatch} '>${content}</span>`;
+        domLine.innerHTML = html;
     } else if (formula.operator) {
         // not
         const connective = formula.operator;
         const offset = connective.pos;
         const length = connective.lexeme.length;
-        const content = line.textContent;
+        const content = domLine.textContent;
         const before = content.substring(0,offset);
         const after =  content.substring(offset+length);
         const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+        const tokenCss = line.getTokenCssClass(connective);
+        domLine.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}  ${tokenCss}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
     } else if (formula.quantifier){
         // universal / existential
         const connective = formula.quantifier;
         const offset = connective.pos;
         const length = formula.variable.pos + formula.variable.lexeme.length;
-        const content = line.textContent;
+        const content = domLine.textContent;
         const before = content.substring(0,offset);
         const after =  content.substring(offset+length);
         const opMatch = connective.type == matchOperator ? matchOperatorClassName : '';
-        line.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}'>${connective.lexeme}${formula.variable}</span><span class='connectivePart'>${after}</span>`;
+        const tokenCss = line.getTokenCssClass(connective);
+        domLine.innerHTML = `${before}<span class='connectiveHighlightUnary${opMatch}  ${tokenCss}'>${connective.lexeme}${formula.variable}</span><span class='connectivePart'>${after}</span>`;
     }
 }

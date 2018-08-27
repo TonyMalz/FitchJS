@@ -238,44 +238,38 @@ aside {
 }
 
 .connectiveHighlightBinary {
-    !color: yellow;
-    !padding-left: 5px;
-    !padding-right: 5px;
     border: 1px dashed rgba(222, 184, 135, 0.35);
     border-radius: 3px;
     margin: 0;
+    cursor: pointer;
 }
-
 .connectiveHighlightUnary {
-    /*color: #02ff00;*/
+    border: 1px dashed rgba(222, 184, 135, 0.35);
     padding-right: 5px;
+    border-radius: 3px;
 }
-
 .connectivePart{
-        /* color: yellow; */
+    color: #7d7d7d;
     border: 1px dashed rgba(222, 184, 135, 0.35);
     border-radius: 3px;
     margin: 0;
 }
-
 .highlightOperatorOk {
-    color:  #a6e22e;
     border: 1px transparent;
 }
 .highlightFormulaOk {
     border: 1px transparent;
-    color:  #a6e22e;
+    color: inherit;
 }
 
-.tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenEqual {
+.tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenEqual, .tokenNot {
     color: #f92672;
+    cursor: pointer;
 }
 
 .tokenForall, .tokenExists {
     color: #fd971f;
-}
-.tokenNot {
-    color: #ae81ff;
+    cursor: pointer;
 }
 
 .tokenTerm {
