@@ -716,19 +716,26 @@ function handleKeydown(event) {
                     }
 
                     let removedLines = [];
-                    editor.selectedLines.forEach(line => {
+
+                    //delete selected lines in descending order
+                    const numLines = editor.selectedLines.length;
+                    for (let i=numLines-1; i>=0; i--) {
+                        const line = editor.selectedLines[i];
                         const lineNo = parseInt(line.dataset.lineNumber);
-                        if (lineNo == 1)
-                            return;
                         const lineAfterEdit = editor.getLineByNumber(lineNo);
                         if (!lineAfterEdit || lineAfterEdit.textContent.trim().length == 0) {
                             editor.removeLine(lineNo)
                             removedLines.push(lineNo);
                         }
-                    });
 
+                    }
                     const lastLineNo = parseInt(editor.selectedLines[editor.selectedLines.length-1].dataset.lineNumber);
                     if (removedLines.length == editor.selectedLines.length){
+                        if (editor.lines.length == 2) {
+                            //XXX FIXME if every line was deleted at last step to DOM;
+                            editor.addLine(editor.lines[1].content);
+                            editor.removeLine(2);
+                        }
                         //all selected lines have been removed
                         //focus next line after last selected line
                         let nextLineNo = lastLineNo + 1;
@@ -744,10 +751,10 @@ function handleKeydown(event) {
                             SetCaretPosition(line,0);
                         }
                     } else {
-                        if (firstLineAfterDeletion){
+                        if (firstLineAfterDeletion.textContent.trim() != ''){
                             startLine.setContent(firstLineAfterDeletion.textContent);
                         } 
-                        if (lastLineAfterDeletion) {
+                        if (lastLineAfterDeletion.textContent.trim() != '') {
                             const line = editor.getLine(lastLineNo - removedLines.length);
                             line.setContent(lastLineAfterDeletion.textContent);
                             SetCaretPosition(line,0);

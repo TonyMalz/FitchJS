@@ -259,7 +259,7 @@ class Editor {
 		if (!line.isPremise && this.numSteps == 1){
 			//keep at least one empty step
 			line.setContent('');
-			return line;			
+			return line.getDom();			
 		}
 
 		line.getDom().parentNode.remove();
@@ -274,18 +274,6 @@ class Editor {
 			this.numSteps--;
 
 		this.checkFitchLines();
-		// const line = this.getLineByNumber(lineNumber);
-		// if (lineNumber == 1 && this.numberOfLines == 1) {
-		// 	// only remove contents if it is the only line left
-		// 	line.textContent='';
-		// 	return line;
-		// }
-		
-		// line.parentNode.remove();
-
-		// // check and update line numbers
-		// this.updateLineNumbers();
-		// //if last line was removed return previous line
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
