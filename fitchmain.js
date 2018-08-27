@@ -1,16 +1,59 @@
+let tooltipToken = null;
+
+function createToolTipToken(that,lineNumber=0) {
+    const operator = that.textContent.trim();
+    const html = `
+                <ul>
+                    <li> ${operator} <button data-line-number=${lineNumber} class='intro'>Intro</button> </li>
+                    <li> ${operator} <button data-line-number=${lineNumber} class='elim'>Elim</button> </li>
+                </ul>
+                `;
+    tooltipToken = document.createElement('div');
+    tooltipToken.className = 'tooltipToken';
+    tooltipToken.innerHTML = html;
+    document.body.append(tooltipToken);
+
+    // position it below token
+    const coords = that.getBoundingClientRect();
+    let left = coords.left - 10;
+    if (left < 0) left = 0; // don't cross the left window edge
+    let top = coords.top + that.offsetHeight;
+    tooltipToken.style.left = left + 'px';
+    tooltipToken.style.top = top + 'px';
+}
 
 let mousedown = null;
 function handleMouse(event) {
     console.log(event)
     let that = event.target;
+
     if (that.nodeName == 'SPAN'){
         console.log('span clicked')
+        if (tooltipToken) {
+            tooltipToken.remove();
+            tooltipToken = null;
+        }
+        if (that.classList.contains('tokenAnd')){
+            const lineNo = parseInt(that.closest('.line').dataset.lineNumber);
+            console.log('AND clicked');
+            createToolTipToken(that,lineNo);
+            return;
+        }
+        if (that.classList.contains('tokenImpl')){
+            const lineNo = parseInt(that.closest('.line').dataset.lineNumber);
+            console.log('IMPL clicked');
+            createToolTipToken(that,lineNo);
+            return;
+        }
         that = event.target.parentNode;
     }
+
+
     if (tooltipElem) {
         tooltipElem.remove();
         tooltipElem = null;
     }
+    
     switch (event.type) {
         case 'mousedown':
             if (that.classList.contains('rule')) {
@@ -34,6 +77,52 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
+            if (tooltipToken) {
+                tooltipToken.remove();
+                tooltipToken = null;
+                if (event.target.classList.contains('intro')){
+                    let lineNo = parseInt(event.target.dataset.lineNumber);
+                    const line = editor.getLine(lineNo);
+                    const formula = line.formula;
+
+                    if (formula instanceof FormulaAnd) {
+                        console.log('Insert AND INTRO', formula);
+                        for (const term of formula.terms){
+                            editor.addLine(String(term),lineNo++,false,line.level);
+                        }
+                    }
+
+                    if (formula instanceof FormulaImpl) {
+                        console.log('Insert IMPL INTRO', formula);
+                        editor.addLine(String(formula.left),lineNo++,false,(line.level+1));
+                        editor.addLine('',lineNo++,false,(line.level+1));
+                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1));
+                    }
+
+                    
+                }
+                if (event.target.classList.contains('elim')){
+                    let lineNo = parseInt(event.target.dataset.lineNumber);
+                    const line = editor.getLine(lineNo);
+                    const formula = line.formula;
+                    
+                    if (formula instanceof FormulaAnd) {
+                        console.log('Insert AND ELIM', formula);
+                        for (const term of formula.terms){
+                            editor.addLine(String(term),++lineNo,false,line.level);
+                        }
+                    }
+
+                    if (formula instanceof FormulaImpl) {
+                        console.log('Insert IMPL INTRO', formula);
+                        editor.addLine(String(formula.left),lineNo++);
+                        editor.addLine(String(formula.right),++lineNo);
+                    }
+                }
+
+                editor.setSyntaxHighlighting(true);
+                editor.checkFitchLines();
+            }
             if (that.classList.contains('rule'))
                 return;
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){

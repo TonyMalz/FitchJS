@@ -484,7 +484,7 @@ class Parser {
                 }
                 const terms = this.term_list();
                 this.consume(TokenType.RIGHT_PAREN,"Expected ')' after the arguments of a predicate");
-                return new PredicateFunction(identifier,[]);
+                return new PredicateFunction(identifier,terms);
             }
             return new PredicateConstant(identifier);
         }
@@ -601,7 +601,8 @@ class FormulaQuantified extends Formula {
         this.line = quantifier.line;
     }
     toString(){
-        return this.quantifier + this.variable + this.right;
+        const right = this.right instanceof FormulaQuantified ? this.right : '('+this.right+')';
+        return this.quantifier + this.variable + right;
     }
     *[Symbol.iterator](){
         yield this.right;
