@@ -40,11 +40,24 @@ function handleMouse(event) {
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
                 // only update if a line was selected
                 if (that.classList.contains('line') || that.parentNode.classList.contains('line')){
+                    
+                    const sel = window.getSelection();
+                    if (sel && sel.type == "Range"){
+                        console.log('double click select');
+                        const range = getHtmlRangePos(that);
+                        console.log('selcted range:', range);
+                        const lineNo = parseInt(that.dataset.lineNumber);
+                        const line = editor.getLine(lineNo);
+                        line.setSyntaxHighlighting(false);
+                        SetRangePosition(line.getDom(),range[0],range[1]);
+                        editor.selectedLines=[line.getDom()];
+                        return;
+                    }
                     that.contentEditable = 'true';
                     const lineNo = parseInt(that.dataset.lineNumber);
                     const line = editor.getLine(lineNo);
                     const caretPos = getHtmlCaretPos(that)
-        
+                    
                     line.setSyntaxHighlighting(false);
                     SetCaretPosition(that,caretPos);
                     console.log(editor.selectedLines)
@@ -1032,6 +1045,15 @@ function SetCaretPosition(el, pos){
     return pos; // needed because of recursion stuff
 }
 
+function SetRangePosition(element, start, end){
+    const textNode = element.childNodes[0];
+    const range = document.createRange();
+    range.setStart(textNode,start);
+    range.setEnd(textNode,end);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
 
 function getHtmlCaretPos(element){
     const range = window.getSelection().getRangeAt(0);
@@ -1045,6 +1067,17 @@ function getHtmlCaretPos(element){
     copyRange.setEnd(range.startContainer, range.startOffset);
     const startPos = copyRange.toString().trimStart().length;
     return startPos < endPos ? startPos : endPos;
+}
+
+function getHtmlRangePos(element){
+    const range = window.getSelection().getRangeAt(0);
+    const copyRange = range.cloneRange();
+    copyRange.selectNodeContents(element);
+    copyRange.setEnd(range.endContainer, range.endOffset);
+    const endPos = copyRange.toString().trimStart().length;
+    copyRange.setEnd(range.startContainer, range.startOffset);
+    const startPos = copyRange.toString().trimStart().length;
+    return [startPos, endPos];
 }
 
 function getCaretPosition() {
