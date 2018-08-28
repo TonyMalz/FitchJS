@@ -83,6 +83,7 @@ function handleMouse(event) {
         case 'mousedown':
             if (that.classList.contains('rule')) {
                 //if rule was already selected, start after current rule name
+                that.contentEditable = true;
                 if (that.textContent.length > 0){
                     const indexColon = that.textContent.indexOf(':');
                     if (indexColon >= 0){
@@ -1084,6 +1085,7 @@ function handleBlur(event) {
         document.querySelectorAll('.line').forEach(line => {
             line.classList.remove('selectedLine');
         });
+        that.contentEditable = false;
         //remove whitespace
         if(that.textContent.trim() == ''){
             that.textContent='';
