@@ -567,7 +567,7 @@ class FormulaBinary extends Formula {
         this.line = left.line;
     }
     toString(){
-        return '( ' + this.left + ' ' + this.connective + ' ' + this.right + ' )';
+        return '(' + this.left + ' ' + this.connective + ' ' + this.right + ')';
     }
     *[Symbol.iterator](){
         yield this.left;
@@ -640,7 +640,7 @@ class FormulaAnd extends Formula {
         return false;
     }
     toString(){
-        return '( ' + this.terms.join(' ∧ ') + ' )';
+        return '(' + this.terms.join(' ∧ ') + ')';
     }
     *[Symbol.iterator](){
         for (const term of this.terms){
@@ -663,7 +663,7 @@ class FormulaOr extends Formula {
         this.line = terms[0].line;
     }
     toString(){
-        return '( ' + this.terms.join(' ∨ ') + ' )';
+        return '(' + this.terms.join(' ∨ ') + ')';
     }
     *[Symbol.iterator](){
         for (const term of this.terms){

@@ -21,6 +21,7 @@ class Line {
 	    if (element.nextElementSibling){
 	    	//update rule XXX
 	    	element.nextElementSibling.id = `r${this.lineNumber}`;
+	    	element.nextElementSibling.dataset.lineNumber = this.lineNumber;
 	    }
 	}
 	setContent(content){
@@ -93,10 +94,46 @@ class Line {
 	highlightTokens() {
 		let content = this.content;
 		let offset = 0;
+		let variable = '';
+		let skipToken = false;
 		for (const token of this.tokens){
+			if (skipToken) {
+				skipToken = false;
+				variable = '';
+				const insertPos = token.pos + offset;
+				const tokenLength = token.lexeme.length;
+				content = content.substring(0,insertPos) + content.substring(insertPos+tokenLength);
+				offset -= tokenLength;
+				continue;
+			}
 			const cssClass = this.getTokenCssClass(token);
 			if (cssClass) {
-				const insert = `<span class='${cssClass}'>${token.lexeme}</span>`;
+				let cssMainOperand = '';
+				if (this.formula.connectives){
+					for (const connective of this.formula.connectives){
+						if (connective.pos == token.pos){
+							cssMainOperand = 'mainOp';
+						}
+					}
+				} else if (this.formula.connective){
+					if (this.formula.connective.pos == token.pos){
+						cssMainOperand = 'mainOp';
+					}
+				} else if (this.formula.quantifier){
+					if (this.formula.quantifier.pos == token.pos){
+						cssMainOperand = 'mainOp';
+						variable = this.formula.variable;
+						skipToken = true;
+					}
+				}  else if (this.formula.operator){
+					if (this.formula.operator.pos == token.pos){
+						cssMainOperand = 'mainOp';
+					}
+				}
+				if (this.formula instanceof FormulaEquality) {
+					cssMainOperand = '';
+				}
+				const insert = `<span class='${cssClass} ${cssMainOperand}'>${token.lexeme}${variable}</span>`;
 				const insertPos = token.pos + offset;
 				const tokenLength = token.lexeme.length;
 				content = content.substring(0,insertPos) + insert + content.substring(insertPos+tokenLength);

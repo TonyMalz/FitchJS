@@ -1,11 +1,36 @@
 let tooltipToken = null;
-
-function createToolTipToken(that,lineNumber=0) {
+let tooltipTokenValue = null;
+function createToolTipToken(that,line) {
+    if (!(line instanceof Line) ) return;
+    const lineNumber = line.lineNumber;
     const operator = that.textContent.trim();
+    const formula = line.formula;
+
+    let htmlIntro = `<li> ${operator} <button data-line-number=${lineNumber} class='intro'>Intro</button> </li>`;
+    let htmlElim = `<li> ${operator} <button data-line-number=${lineNumber} class='elim'>Elim</button> </li>`;
+    
+    if (formula instanceof FormulaNot) {
+        if (!(formula.right instanceof FormulaNot)) {
+            htmlElim = '';
+        }
+    }
+
+    if (formula instanceof FormulaOr) {
+        htmlIntro = '';
+        htmlElim = `<li> ${operator} <button data-line-number=${lineNumber} class='elim'>Elim</button>
+                        <input type='text' class='tooltipTokenValue'></input>
+                    </li>`;
+
+    }
+
+    if (line.isPremise || line.getDom().classList.contains('fitchline')){
+        htmlIntro = '';
+    }
+
     const html = `
                 <ul>
-                    <li> ${operator} <button data-line-number=${lineNumber} class='intro'>Intro</button> </li>
-                    <li> ${operator} <button data-line-number=${lineNumber} class='elim'>Elim</button> </li>
+                    ${htmlIntro}
+                    ${htmlElim}
                 </ul>
                 `;
     tooltipToken = document.createElement('div');
@@ -15,7 +40,7 @@ function createToolTipToken(that,lineNumber=0) {
 
     // position it below token
     const coords = that.getBoundingClientRect();
-    let left = coords.left - 10;
+    let left = coords.left - 25;
     if (left < 0) left = 0; // don't cross the left window edge
     let top = coords.top + that.offsetHeight;
     tooltipToken.style.left = left + 'px';
@@ -26,23 +51,23 @@ let mousedown = null;
 function handleMouse(event) {
     console.log(event)
     let that = event.target;
-
+    if (that.classList.contains('tooltipTokenValue')){
+        return;
+    }
     if (that.nodeName == 'SPAN'){
         console.log('span clicked')
         if (tooltipToken) {
             tooltipToken.remove();
             tooltipToken = null;
         }
-        if (that.classList.contains('tokenAnd')){
+        if (that.classList.contains('mainOp') && (
+            that.classList.contains('tokenAnd') || 
+            that.classList.contains('tokenImpl') ||
+            that.classList.contains('tokenOr') ||
+            that.classList.contains('tokenNot')
+            )){
             const lineNo = parseInt(that.closest('.line').dataset.lineNumber);
-            console.log('AND clicked');
-            createToolTipToken(that,lineNo);
-            return;
-        }
-        if (that.classList.contains('tokenImpl')){
-            const lineNo = parseInt(that.closest('.line').dataset.lineNumber);
-            console.log('IMPL clicked');
-            createToolTipToken(that,lineNo);
+            createToolTipToken(that,editor.getLine(lineNo));
             return;
         }
         that = event.target.parentNode;
@@ -80,9 +105,16 @@ function handleMouse(event) {
             if (tooltipToken) {
                 tooltipToken.remove();
                 tooltipToken = null;
+
+                // Tactics
                 if (event.target.classList.contains('intro')){
+                    // INTRO Rules
                     let lineNo = parseInt(event.target.dataset.lineNumber);
                     const line = editor.getLine(lineNo);
+                    if (line.isPremise || line.getDom().classList.contains('fitchline')) {
+                        // don't allow intro for premises and asumptions
+                        return;
+                    }
                     const formula = line.formula;
 
                     if (formula instanceof FormulaAnd) {
@@ -97,6 +129,13 @@ function handleMouse(event) {
                         editor.addLine(String(formula.left),lineNo++,false,(line.level+1));
                         editor.addLine('',lineNo++,false,(line.level+1));
                         editor.addLine(String(formula.right),lineNo++,false,(line.level+1));
+                    }
+
+                    if (formula instanceof FormulaNot) {
+                        console.log('Insert NOT INTRO', formula);
+                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1));
+                        editor.addLine('',lineNo++,false,(line.level+1));
+                        editor.addLine('⊥',lineNo++,false,(line.level+1));
                     }
 
                     
@@ -114,9 +153,29 @@ function handleMouse(event) {
                     }
 
                     if (formula instanceof FormulaImpl) {
-                        console.log('Insert IMPL INTRO', formula);
-                        editor.addLine(String(formula.left),lineNo++);
-                        editor.addLine(String(formula.right),++lineNo);
+                        console.log('Insert IMPL ELIM', formula);
+                        let levelAnte = line.level;
+                        if (line.getDom().classList.contains('fitchline')) {
+                            levelAnte--;
+                        }
+                        editor.addLine(String(formula.left),lineNo++,false,levelAnte);
+                        editor.addLine(String(formula.right),++lineNo,false,line.level);
+                    }
+
+                    if (formula instanceof FormulaNot && formula.right instanceof FormulaNot) {
+                        console.log('Insert NOT ELIM', formula);
+                        editor.addLine(String(formula.right.right),++lineNo,false,(line.level));
+                    }
+
+                    if (formula instanceof FormulaOr) {
+                        console.log('Insert OR ELIM', formula);
+                        for (const term of formula.terms){
+                            editor.addLine(String(term),++lineNo,false,(line.level+1));
+                            editor.addLine('',++lineNo,false,(line.level+1));
+                            editor.addLine(tooltipTokenValue,++lineNo,false,(line.level+1));
+                            editor.addLine('',++lineNo,false,(line.level));
+                        }
+                        editor.addLine(tooltipTokenValue,lineNo,false,(line.level));
                     }
                 }
 
@@ -539,6 +598,15 @@ function handleKeyup(event) {
         handleKeyupRule(event);
         return;
     }
+    if (that.classList.contains('tooltipTokenValue')){
+        tooltipTokenValue = that.value;
+        console.log(tooltipTokenValue)
+        return;
+    }
+    if (!that.classList.contains('line')){
+        return;
+    }
+
     showCaretPos(event);
     const lineNo = parseInt(that.dataset.lineNumber);
 
@@ -667,6 +735,9 @@ function handleKeydown(event) {
     const that = event.target;
     if (event.defaultPrevented) {
         return; // Do nothing if the event was already processed
+    }
+    if (that.classList.contains('tooltipTokenValue')){
+        return;
     }
     const lineNo = parseInt(that.dataset.lineNumber);
     lineKeydown = lineNo;
@@ -1055,12 +1126,13 @@ function handleFocus(event) {
 const editor = new Editor();
 window.addEventListener("load", function(){
     const ed = document.getElementById('editor');
-    ed.addEventListener('keyup', handleKeyup);
+    
     ed.addEventListener('paste', handlePaste);
     ed.addEventListener("focusout", handleBlur);
     ed.addEventListener("focusin", handleFocus);
     // because of range selection with mouse
     document.addEventListener("keydown", handleKeydown);
+    document.addEventListener('keyup', handleKeyup);
 
     //register on window to capture mouseups everywhere (i.e. if user selects fast or imprecisely)
     window.addEventListener("mousedown", handleMouse);
@@ -1072,6 +1144,7 @@ window.addEventListener("load", function(){
     editor.addLine('∀x∀y(Peter(x,y) ∧ Hans(y)) → ∃z(Leo(z))');
     editor.addLine('¬∀x∀y(Peter(x) ∧ Hans(y)) → ∃z(Leo(z))');
     editor.addLine('hans = peter');
+    editor.addLine('Hans ∨ Peter ∨ Leo');
     editor.setSyntaxHighlighting(true);
 });
 

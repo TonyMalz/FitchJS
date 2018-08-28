@@ -62,7 +62,7 @@ aside {
     width: 100%;
     /*overflow: hidden;*/
     margin : 0px;
-    padding-bottom: 5px;
+    padding-bottom: 8px;
     /*word-break: break-all;*/
     border-bottom: 1px solid transparent;
     padding-left: 23px;
@@ -226,9 +226,9 @@ aside {
 .tooltipToken {
     position: absolute;
     padding-top: 5px;
-    padding-left: 10px;
-    padding-right: 15px;
-    padding-bottom: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 8px;
     font-family: "Consolas";
     font-size: 12px;
     color: white;
@@ -247,9 +247,14 @@ aside {
 .tooltipToken li {
     padding-top: 3px;
     padding-bottom: 3px;
+    padding-right: 15px;
+    padding-left: 5px;
 }
 .tooltipToken li:hover {
     background: rgb(95, 95, 95);
+}
+.tooltipToken li > button {
+    cursor: pointer;
 }
 
 .selectedLine {
@@ -268,14 +273,15 @@ aside {
 
 .connectiveHighlightBinary {
     border: 1px dashed rgba(222, 184, 135, 0.35);
-    border-radius: 3px;
-    margin: 0;
-    cursor: pointer;
+    border-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
 }
 .connectiveHighlightUnary {
     border: 1px dashed rgba(222, 184, 135, 0.35);
-    padding-right: 5px;
-    border-radius: 3px;
+    border-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
 }
 .connectivePart{
     color: #7d7d7d;
@@ -291,9 +297,9 @@ aside {
     color: inherit;
 }
 
-.tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenEqual, .tokenNot {
+.tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenNot {
     color: #f92672;
-    cursor: pointer;
+
 }
 
 .tokenForall, .tokenExists {
@@ -305,9 +311,17 @@ aside {
     color: #fd971f;
 }
 
-.tokenPremise, .tokenFalse {
+.tokenPremise, .tokenFalse, .tokenEqual {
     color: #effcff;
 }
 .tokenParen, .tokenComma {
     color: #7d7d7d;
+}
+
+.mainOp {
+    cursor: pointer;
+    border: 1px dashed rgba(222, 184, 135, 0.35);
+    border-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
 }
