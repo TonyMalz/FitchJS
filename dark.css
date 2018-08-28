@@ -325,3 +325,8 @@ aside {
     padding-left: 4px;
     padding-right: 4px;
 }
+
+.dim {
+    mix-blend-mode: overlay;
+    color: #effcff;
+}

@@ -12,6 +12,7 @@ class Line {
 		this.DomElement = null;
 		this.formattedContent = ''; // html content XXX really needed?
 		this.error = null;
+		this.isDimmed = false;
 	}
 	setLineNumber(lineNumber){
 		const element = this.getDom();
@@ -91,7 +92,19 @@ class Line {
 		}
 		return cssClass;
 	}
-	highlightTokens() {
+	dimLine(){
+		this.formattedContent = this.highlightTokens(true);
+		this.getDom().innerHTML = this.formattedContent;
+		this.isDimmed = true;
+	}
+	unDimLine(){
+		if (this.isDimmed){
+			this.formattedContent = this.highlightTokens(false);
+			this.getDom().innerHTML = this.formattedContent;
+			this.isDimmed = false;
+		}
+	}
+	highlightTokens(dim = false) {
 		let content = this.content;
 		let offset = 0;
 		let variable = '';
@@ -133,7 +146,12 @@ class Line {
 				if (this.formula instanceof FormulaEquality) {
 					cssMainOperand = '';
 				}
-				const insert = `<span class='${cssClass} ${cssMainOperand}'>${token.lexeme}${variable}</span>`;
+				let dimCssClass = '';
+				if (dim){
+					dimCssClass = 'dim';
+					//cssMainOperand = '';
+				}
+				const insert = `<span class='${cssClass} ${cssMainOperand} ${dimCssClass}'>${token.lexeme}${variable}</span>`;
 				const insertPos = token.pos + offset;
 				const tokenLength = token.lexeme.length;
 				content = content.substring(0,insertPos) + insert + content.substring(insertPos+tokenLength);

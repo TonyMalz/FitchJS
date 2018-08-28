@@ -826,6 +826,7 @@ function handleKeydown(event) {
             if (indentLevel > 0)
                 //close subproof
                 line.setLevel(--indentLevel);
+                dimLines(line.lineNumber);
           } else {
                 // check level of previous line
                 const levelPrevLine = (lineNo > 1) ? editor.getLineByNumber(lineNo-1).dataset.level : 0;
@@ -836,6 +837,7 @@ function handleKeydown(event) {
                 }
                 //open subproof
                 line.setLevel(++indentLevel);
+                dimLines(line.lineNumber);
           }
           tabProcessed = true;
           break;
@@ -1076,7 +1078,7 @@ function handlePaste(event) {
 function handleBlur(event) {
     console.log('focusout')
     const that = event.target;
-    const lineNo = that.dataset.lineNumber;
+    const lineNo = parseInt(that.dataset.lineNumber);
     if (that.classList.contains('rule')){
         //clean up
         document.querySelectorAll('.line').forEach(line => {
@@ -1102,7 +1104,7 @@ function handleBlur(event) {
 function handleFocus(event) {
     console.log('focusin')
     const that = event.target;
-    const lineNo = that.dataset.lineNumber;
+    const lineNo = parseInt(that.dataset.lineNumber);
     if (that.classList.contains('rule')) {
         highlightFormulaParts(lineNo)
         //if rule was already selected, start at end
@@ -1119,9 +1121,55 @@ function handleFocus(event) {
     }
     if (that.classList.contains('line')) {
         editor.selectedLines = [that];
+        // check current level and dim other subproofs if any
+        dimLines(lineNo);
     }
 }
 
+function dimLines(lineNo){
+    const startLevel = editor.getLine(lineNo).level;
+    let descented = false
+    // undim next lines of same suproof level 
+    for (let nextLineNo = lineNo+1; nextLineNo <= editor.numberOfLines; nextLineNo++ ){
+        const line = editor.getLine(nextLineNo);
+        if (!descented && line.level == startLevel){
+            line.unDimLine();
+            continue;
+        }
+        if (descented){
+            line.dimLine()
+            continue;
+        }
+        if (line.level > startLevel){
+            line.dimLine();
+        }
+        if (line.level < startLevel){
+            descented = true;
+            line.dimLine();
+        }
+    }
+
+    let currentLevel = startLevel;
+
+    // dim previous lines if not in same subproof
+    for (let prevLine = lineNo-1; prevLine > 0; prevLine-- ){
+        const line = editor.getLine(prevLine);
+        if (line.level == currentLevel){
+            line.unDimLine()
+            continue;
+        }
+
+        if (line.level > currentLevel) {
+            line.dimLine();
+        }
+        if (line.level < currentLevel) {
+            line.unDimLine()
+            currentLevel = line.level;
+        }
+        if (line.isPremise)
+            break;
+    }
+}
 
 const editor = new Editor();
 window.addEventListener("load", function(){
