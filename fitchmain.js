@@ -803,6 +803,10 @@ function handleKeydown(event) {
           const current = editor.getLine(lineNo);
           current.setContent(textLeft);
           next.setContent(textRight);
+          // if cursor was at end of line and it was the last premise ceate a new step instead of a new premise
+          if (textRight.trim().length == 0 && current.isPremise && current.getDom().classList.contains('fitchline')) {
+            next.setIsPremise(false);
+          }
           SetCaretPosition(next,0);
           enterProcessed = true;
           break;
@@ -854,6 +858,7 @@ function handleKeydown(event) {
                         // close subproof
                         if (indentLevel > 0){
                             line.setLevel(--indentLevel);
+                            dimLines(lineNo);
                             return;
                         } else {
                            if (lineNo > 0) {
@@ -914,7 +919,7 @@ function handleKeydown(event) {
                     const lastLineNo = parseInt(editor.selectedLines[editor.selectedLines.length-1].dataset.lineNumber);
                     if (removedLines.length == editor.selectedLines.length){
                         if (editor.lines.length == 2) {
-                            //XXX FIXME if every line was deleted at last step to DOM;
+                            //XXX FIXME if every line was deleted add last step to the DOM;
                             editor.addLine(editor.lines[1].content);
                             editor.removeLine(2);
                         }
@@ -1225,12 +1230,14 @@ function parseLineDiv(div) {
 
 // Move caret to a specific point in a DOM element
 function SetCaretPosition(el, pos){
-    //console.log('caret', pos, el)
+    console.log('caret', pos, el)
     if (!el)
         return -1;
     if (el instanceof Line){
         el.setSyntaxHighlighting(false);
         el = el.getDom();
+    } else {
+        el.textContent = el.textContent;
     }
     if (el.classList.contains('line')){
         editor.selectedLines = [el];

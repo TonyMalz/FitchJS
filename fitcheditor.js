@@ -120,7 +120,7 @@ class Line {
 				continue;
 			}
 			const cssClass = this.getTokenCssClass(token);
-			if (cssClass) {
+			if (cssClass && this.formula) {
 				let cssMainOperand = '';
 				if (this.formula.connectives){
 					for (const connective of this.formula.connectives){
@@ -169,6 +169,11 @@ class Line {
 	}
 	setIsPremise(isPremise){
 		this.isPremise = isPremise;
+		if (this.isPremise) {
+			this.getDom().classList.add('premise');
+		} else {
+			this.getDom().classList.remove('premise');
+		}
 		if (this.formula)
 			this.formula.isPremise = isPremise;
 		this.editor.updateFitchlines();
@@ -303,6 +308,7 @@ class Editor {
 	removeLine(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return null;
+		editor.activeLine = null;
 		const line = this.getLine(lineNumber);
 		if (line.isPremise && this.numPremises == 1) {
 			//keep at least one empty premise

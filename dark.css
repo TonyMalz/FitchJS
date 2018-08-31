@@ -126,6 +126,7 @@ aside {
     -moz-user-select: none;
     cursor: pointer;
     position: relative;
+    text-shadow: none;
 }
 .rule:empty:before {
     content: attr(placeholder);
@@ -327,6 +328,5 @@ aside {
 }
 
 .dim {
-    mix-blend-mode: overlay;
-    color: #effcff;
+    color: #effcff59;
 }
