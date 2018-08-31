@@ -1,5 +1,5 @@
 let tooltipToken = null;
-let tooltipTokenValue = null;
+let tooltipTokenValue = '';
 function createToolTipToken(that,line) {
     if (!(line instanceof Line) ) return;
     const lineNumber = line.lineNumber;
@@ -121,22 +121,24 @@ function handleMouse(event) {
                     if (formula instanceof FormulaAnd) {
                         console.log('Insert AND INTRO', formula);
                         for (const term of formula.terms){
-                            editor.addLine(String(term),lineNo++,false,line.level);
+                            editor.addLine(String(term),lineNo++,false,line.level,true);
                         }
                     }
 
                     if (formula instanceof FormulaImpl) {
                         console.log('Insert IMPL INTRO', formula);
-                        editor.addLine(String(formula.left),lineNo++,false,(line.level+1));
-                        editor.addLine('',lineNo++,false,(line.level+1));
-                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1));
+                        editor.addLine('',lineNo++,false,(line.level));
+                        editor.addLine(String(formula.left),lineNo++,false,(line.level+1),true);
+                        editor.addLine('',lineNo++,false,(line.level+1),true);
+                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1),true);
                     }
 
                     if (formula instanceof FormulaNot) {
                         console.log('Insert NOT INTRO', formula);
-                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1));
-                        editor.addLine('',lineNo++,false,(line.level+1));
-                        editor.addLine('⊥',lineNo++,false,(line.level+1));
+                        editor.addLine('',lineNo++,false,(line.level));
+                        editor.addLine(String(formula.right),lineNo++,false,(line.level+1),true);
+                        editor.addLine('',lineNo++,false,(line.level+1),true);
+                        editor.addLine('⊥',lineNo++,false,(line.level+1),true);
                     }
 
                     
@@ -149,7 +151,7 @@ function handleMouse(event) {
                     if (formula instanceof FormulaAnd) {
                         console.log('Insert AND ELIM', formula);
                         for (const term of formula.terms){
-                            editor.addLine(String(term),++lineNo,false,line.level);
+                            editor.addLine(String(term),++lineNo,false,line.level,true);
                         }
                     }
 
@@ -159,24 +161,24 @@ function handleMouse(event) {
                         if (line.getDom().classList.contains('fitchline')) {
                             levelAnte--;
                         }
-                        editor.addLine(String(formula.left),lineNo++,false,levelAnte);
-                        editor.addLine(String(formula.right),++lineNo,false,line.level);
+                        editor.addLine(String(formula.left),lineNo++,false,levelAnte,true);
+                        editor.addLine(String(formula.right),++lineNo,false,line.level,true);
                     }
 
                     if (formula instanceof FormulaNot && formula.right instanceof FormulaNot) {
                         console.log('Insert NOT ELIM', formula);
-                        editor.addLine(String(formula.right.right),++lineNo,false,(line.level));
+                        editor.addLine(String(formula.right.right),++lineNo,false,(line.level),true);
                     }
 
                     if (formula instanceof FormulaOr) {
                         console.log('Insert OR ELIM', formula);
                         for (const term of formula.terms){
-                            editor.addLine(String(term),++lineNo,false,(line.level+1));
-                            editor.addLine('',++lineNo,false,(line.level+1));
-                            editor.addLine(tooltipTokenValue,++lineNo,false,(line.level+1));
-                            editor.addLine('',++lineNo,false,(line.level));
+                            editor.addLine(String(term),++lineNo,false,(line.level+1),true);
+                            editor.addLine('',++lineNo,false,(line.level+1),true);
+                            editor.addLine(tooltipTokenValue,++lineNo,false,(line.level+1),true);
+                            editor.addLine('',++lineNo,false,(line.level),true);
                         }
-                        editor.addLine(tooltipTokenValue,lineNo,false,(line.level));
+                        editor.addLine(tooltipTokenValue,lineNo,false,(line.level),true);
                     }
                 }
 
@@ -997,6 +999,14 @@ function handleKeydown(event) {
             }
             if (event.ctrlKey)
                 return;
+        case "z":
+            //undo last delete event
+            console.log('z',lineNo);
+            if (event.ctrlKey === true ) {
+                console.log('undo delete');
+                editor.undo();
+                break;
+            }
         case "d":
             //delete current line
             console.log('d',lineNo);

@@ -330,3 +330,14 @@ aside {
 .dim {
     color: #effcff59;
 }
+
+@keyframes linesAdded {
+    from {background-color: #7d7d7d;}
+    to {background-color: inherit;}
+}
+
+.added {
+    animation-name: linesAdded;
+    animation-duration: .7s;
+    animation-timing-function: ease-out;
+}

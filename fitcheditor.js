@@ -171,8 +171,12 @@ class Line {
 		this.isPremise = isPremise;
 		if (this.isPremise) {
 			this.getDom().classList.add('premise');
+			this.editor.numPremises++;
+			this.editor.numSteps--;
 		} else {
 			this.getDom().classList.remove('premise');
+			this.editor.numPremises--;
+			this.editor.numSteps++;
 		}
 		if (this.formula)
 			this.formula.isPremise = isPremise;
@@ -219,11 +223,12 @@ class Editor {
 
 		this.numPremises = 0;
 		this.numSteps = 0;
+		this.undoStack = [];
 	}
 	addPremise(text, lineNumber=null){
 		return this.addLine(text,lineNumber,true);
 	}
-	addLine(text, lineNumber=null, isPremise=false, level=0){
+	addLine(text, lineNumber=null, isPremise=false, level=0, highlight=false){
 		if (lineNumber && (lineNumber > (this.numberOfLines+1) || lineNumber < 1))
 			return;
 		
@@ -241,7 +246,7 @@ class Editor {
 		}
 
 		// add DOM element
-		const html = this.getLineTemplate(lineNo, text,isPremise);
+		const html = this.getLineTemplate(lineNo, text, isPremise, highlight);
 		if (lineBefore) {
 			lineBefore.getDom().parentNode.insertAdjacentHTML('afterend',html);
 		} else {
@@ -302,14 +307,25 @@ class Editor {
 			return this.addPremise('',++lineNumber);
 		return this.addLine('',++lineNumber,false,prevLine.level);
 	}
+	undo(){
+		const line = this.undoStack.pop();
+		if (line){
+			const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
+			newline.setSyntaxHighlighting(true);
+			this.checkFitchLines();
+		}
+	}
 	removeCurrentLine(){
-		this.removeLine(this.currentLine)
+		this.removeLine(this.currentLine);
 	}
 	removeLine(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return null;
 		editor.activeLine = null;
 		const line = this.getLine(lineNumber);
+
+		this.undoStack.push(line);
+		
 		if (line.isPremise && this.numPremises == 1) {
 			//keep at least one empty premise
 			line.setContent('');
@@ -366,10 +382,11 @@ class Editor {
 	getLineByNumber(lineNumber){
 		return document.getElementById('l'+parseInt(lineNumber));
 	}
-	getLineTemplate(lineNumber,content, isPremise=false){
+	getLineTemplate(lineNumber,content, isPremise=false, highlight=false){
+		const highlightClass = highlight? ' added' : '';
 		const premiseClass = isPremise ? ' premise' : '';
 		return `<div class="row">
-					<div data-line-number=${this.padLineNumber(lineNumber)} data-level=0 id="l${lineNumber}" class="line${premiseClass}" spellcheck="false">${content}</div>
+					<div data-line-number=${this.padLineNumber(lineNumber)} data-level=0 id="l${lineNumber}" class="line${premiseClass}${highlightClass}" spellcheck="false">${content}</div>
 		        	<div class="rule" contenteditable="true" data-line-number=${lineNumber} id="r${lineNumber}"  placeholder="add rule" spellcheck="false"></div>
 		        </div>`
 	}
