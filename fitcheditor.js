@@ -29,8 +29,6 @@ class Line {
 	    }
 	}
 	setContent(content){
-		if (this.content == content)
-			return;
 		this.content = content;
 		this.tokens = new Scanner(content,this.lineNumber).scanTokens();
 		for (const token of this.tokens) {
