@@ -14,6 +14,9 @@ class Line {
 		this.error = null;
 		this.isDimmed = false;
 	}
+	copy(){
+		return Object.assign({},this);
+	}
 	setLineNumber(lineNumber){
 		const element = this.getDom();
 		this.lineNumber = lineNumber;
@@ -26,6 +29,8 @@ class Line {
 	    }
 	}
 	setContent(content){
+		if (this.content == content)
+			return;
 		this.content = content;
 		this.tokens = new Scanner(content,this.lineNumber).scanTokens();
 		for (const token of this.tokens) {
@@ -224,6 +229,7 @@ class Editor {
 		this.numPremises = 0;
 		this.numSteps = 0;
 		this.undoStack = [];
+		this.redoStack = [];
 	}
 	addPremise(text, lineNumber=null){
 		return this.addLine(text,lineNumber,true);
@@ -270,6 +276,7 @@ class Editor {
 		this.numberOfLines = this.lines.length;
 		this.lines.sort((a,b) =>  (a.lineNumber < b.lineNumber ? -1 : 1) );
 		
+		this.undoStack.push(['add',line, new Date()]);
 		console.log('added line:',line);
 		return line;
 	}
@@ -308,11 +315,81 @@ class Editor {
 		return this.addLine('',++lineNumber,false,prevLine.level);
 	}
 	undo(){
-		const line = this.undoStack.pop();
-		if (line){
-			const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
-			newline.setSyntaxHighlighting(true);
-			this.checkFitchLines();
+		let timeEventBefore = 0;
+		while (true){
+			const event = this.undoStack.pop();
+			if (!event) {
+				return;
+			}
+			const type = event[0];
+			const line = event[1];
+			const date = event[2];
+			const timeCurrentEvent = date.getTime();
+			if (timeEventBefore !=0){
+				const deltaEvents = Math.abs(timeCurrentEvent - timeEventBefore);
+				if (deltaEvents > 10) {
+					this.undoStack.push([type,line,date]);
+					break;
+				}
+			}
+			if (type === 'remove'){
+				console.log('undo remove',line);
+				const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
+				newline.setSyntaxHighlighting(true);
+				this.undoStack.pop();
+				this.redoStack.push(['remove',line, date]);
+				this.checkFitchLines();
+			} else if (type === 'add') {
+				console.log('undo add',line);
+				this.removeLine(line.lineNumber);
+				this.undoStack.pop();
+				this.redoStack.push(['add',line, date]);
+			} else if (type === 'content') {
+				const l = editor.getLine(line.lineNumber);
+				//this.redoStack.push(['add',line, date,event[3]]);
+				l.setContent(line.content);
+				l.setSyntaxHighlighting(true);
+				SetCaretPosition(l,event[3]);
+			}
+			
+			timeEventBefore = timeCurrentEvent;
+		}
+	}
+	redo(){
+		let timeEventBefore = 0;
+		while (true){
+			const event = this.redoStack.pop();
+			if (!event) {
+				return;
+			}
+			const type = event[0];
+			const line = event[1];
+			const date = event[2];
+			const timeCurrentEvent = date.getTime();
+			if (timeEventBefore !=0){
+				const deltaEvents = Math.abs(timeCurrentEvent - timeEventBefore);
+				if (deltaEvents > 10) {
+					this.redoStack.push([type,line,date]);
+					break;
+				}
+			}
+			if (type === 'add'){
+				console.log('redo add',line);
+				const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
+				newline.setSyntaxHighlighting(true);
+				this.checkFitchLines();
+			} else if (type === 'remove') {
+				console.log('redo remove',line);
+				this.removeLine(line.lineNumber);
+			} else if (type === 'content') {
+				console.log('redo content',line);
+				const l = editor.getLine(line.lineNumber);
+				l.setContent(line.content);
+				l.setSyntaxHighlighting(true);
+				SetCaretPosition(l,event[3]);
+			}
+			
+			timeEventBefore = timeCurrentEvent;
 		}
 	}
 	removeCurrentLine(){
@@ -324,7 +401,7 @@ class Editor {
 		editor.activeLine = null;
 		const line = this.getLine(lineNumber);
 
-		this.undoStack.push(line);
+		this.undoStack.push(['remove', line, new Date()]);
 		
 		if (line.isPremise && this.numPremises == 1) {
 			//keep at least one empty premise

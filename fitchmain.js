@@ -895,6 +895,7 @@ function handleKeydown(event) {
                     const startLine = editor.getLine(editor.selectedLines[0].dataset.lineNumber);
                     const caretPos = getHtmlCaretPos(startLine.getDom());
                     range.deleteContents();
+                    editor.undoStack.push(['content',startLine.copy(),new Date(),caretPos]);
                     const firstLineId = editor.selectedLines[0].id;
                     const firstLineAfterDeletion = document.getElementById(firstLineId);
                     const lastLineId = editor.selectedLines[editor.selectedLines.length-1].id;
@@ -945,6 +946,7 @@ function handleKeydown(event) {
                         } 
                         if (lastLineAfterDeletion.textContent.trim() != '') {
                             const line = editor.getLine(lastLineNo - removedLines.length);
+                            editor.undoStack.push(['content',line.copy(),new Date(),caretPos]);
                             line.setContent(lastLineAfterDeletion.textContent);
                             SetCaretPosition(line,0);
                         } else {
@@ -955,6 +957,7 @@ function handleKeydown(event) {
                     const lineNo = parseInt(editor.selectedLines[0].dataset.lineNumber);
                     const line = editor.getLine(lineNo)
                     const caretPos = getHtmlCaretPos(editor.selectedLines[0]);
+                    editor.undoStack.push(['content',line.copy(),new Date(),caretPos]);
                     range.deleteContents();
                     line.setContent(editor.selectedLines[0].textContent);
                     SetCaretPosition(line,caretPos);
@@ -1000,13 +1003,30 @@ function handleKeydown(event) {
             if (event.ctrlKey)
                 return;
         case "z":
-            //undo last delete event
+            //undo last event
             console.log('z',lineNo);
-            if (event.ctrlKey === true ) {
-                console.log('undo delete');
-                editor.undo();
-                break;
+            if (event.ctrlKey === true) {
+                console.log('undo');
+                const line = editor.getLine(lineNo);
+                if (!line || line && line.content === that.textContent) {
+                    editor.undo();
+                    break;
+                } 
             }
+            return;
+        case "y":
+            //redo last event
+            console.log('y',lineNo);
+            if (event.ctrlKey === true) {
+                console.log('redo');
+                const line = editor.getLine(lineNo);
+                // XXX FIXME
+                if (!line || line && line.content === that.textContent) {
+                    editor.redo();
+                    break;
+                } 
+            }
+            return;
         case "d":
             //delete current line
             console.log('d',lineNo);
@@ -1032,6 +1052,7 @@ function handleKeydown(event) {
                     const caretPos = getHtmlCaretPos(editor.selectedLines[0]);
                     range.deleteContents();
                     const line = editor.getLine(lineNo);
+                    editor.undoStack.push(['content',line.copy(),new Date(),caretPos]);
                     line.setContent(editor.getLineByNumber(lineNo).textContent);
                     SetCaretPosition(line,caretPos);
                 } 
@@ -1211,6 +1232,7 @@ window.addEventListener("load", function(){
     editor.addLine('hans = peter');
     editor.addLine('Hans ∨ Peter ∨ Leo');
     editor.setSyntaxHighlighting(true);
+    editor.undoStack = [];
 });
 
 
