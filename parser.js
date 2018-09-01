@@ -319,7 +319,7 @@ class Parser {
 
     consume(type, message) {
         if (this.check(type)) return this.advance();
-        throw this.error(this.peek(), message);
+        throw this.error(this.previous(), message);
     }
 
     isAtEnd() {
@@ -353,7 +353,7 @@ class Parser {
 
     checkIsAtEOF(){
         if(this.peek().type != TokenType.EOF){
-            throw this.error(this.peek(), "Unexpected end token");
+            throw this.error(this.peek(), `Did not expect '${this.peek()}' at this position`);
         }
     }
 
@@ -389,7 +389,7 @@ class Parser {
                     const right = this.e3();
                     return new FormulaQuantified(quantifier, variable, right);
                 }
-                throw this.error(this.peek(), "Expected ( or a quantifier after a quantor");
+                throw this.error(this.peek(), "Expected '(' or a quantifier after a quantor");
             }
             throw this.error(peek(),"Expected a variable after quantification");
         }
@@ -442,7 +442,7 @@ class Parser {
             const identifier = this.previous();
             if (identifier.lexeme[0] !== identifier.lexeme[0].toLowerCase()){
                 // convention: if identifier starts with lower case letter it is a term
-                throw this.error(identifier, "Expected a function or variable and not a predicate");
+                throw this.error(identifier, `Expected a function or variable and not a predicate. Did you mean '${identifier.lexeme.toLowerCase()}' instead?`);
             }
             if (this.match(TokenType.LEFT_PAREN)){
                 if (this.match(TokenType.RIGHT_PAREN)) {
@@ -455,7 +455,7 @@ class Parser {
             }
             return new TermVariable(identifier);
         }
-        throw this.error(this.peek(), "Expected a function or variable at this position");
+        throw this.error(this.previous(), `Expected a function or variable after ${this.previous()}`);
     }
     predicate(){
         if(this.match(TokenType.TRUE, TokenType.FALSE)){
@@ -472,7 +472,10 @@ class Parser {
                     const right = this.term();
                     return new FormulaEquality(left,connective,right);
                 }
-                throw this.error(this.peek(), "Expected an equal sign '=' after term function or variable");
+                const prevtoken = this.previous();
+                let asPremise = prevtoken.lexeme;
+                asPremise = asPremise.charAt(0).toUpperCase() + asPremise.slice(1);
+                throw this.error(prevtoken, `Expected an equal sign '=' after '${prevtoken}' or did you mean '${asPremise}' instead? `);
             }
         }
         if(this.match(TokenType.IDENTIFIER)){
@@ -488,7 +491,19 @@ class Parser {
             }
             return new PredicateConstant(identifier);
         }
-        throw this.error(this.peek(), "Expected a predicate at this position");
+        if (this.previous())
+            throw this.error(this.previous(), `Expected a predicate after '${this.previous()}' `);
+        else {
+            const token = this.peek();
+            switch (token.type) {
+                case TokenType.AND:
+                case TokenType.OR:
+                case TokenType.IMPL:
+                case TokenType.BI_IMPL:
+                    throw this.error(token, `Expected a predicate before '${token}' `);
+            }
+            throw this.error(this.peek(), `Expected a predicate instead of '${this.peek()}' `);
+        }
     }
     term_list(){
         const terms = [];

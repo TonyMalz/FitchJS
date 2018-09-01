@@ -5,7 +5,7 @@ class Line {
 		this.level = 0; // greater 0 means it is a subproof
 		this.lineNumber;
 		this.content = ''; // raw text 
-		this.tokens;  // text tokens
+		this.tokens = [];  // text tokens
 		this.formula; // parsed formula if valid content exists
 		this.rule;    // rule selection element
 		this.isPremise = false;
@@ -29,7 +29,9 @@ class Line {
 	    }
 	}
 	setContent(content){
+		if (this.content == content) return;
 		this.content = content;
+
 		this.tokens = new Scanner(content,this.lineNumber).scanTokens();
 		for (const token of this.tokens) {
 			if(token.type === TokenType.IDENTIFIER){
@@ -40,6 +42,8 @@ class Line {
 			this.formula = new Parser(this.tokens).parse();
 			if (!this.formula)
 				this.error = fitcherror;//XXX
+			else
+				this.error = null;
 		}
 
 		this.formattedContent = this.highlightTokens();
@@ -47,6 +51,15 @@ class Line {
 		this.getDom().textContent = this.content;
 		//this.getDom().innerHTML = this.formattedContent;
 		// XXX check rule
+
+		// XXX FIXME: don't use rule selection for error messages
+		if(this.error) {
+			this.getDom().nextElementSibling.textContent = this.error.message;
+			this.getDom().nextElementSibling.classList.add('ruleError');
+		} else {
+			this.getDom().nextElementSibling.textContent = '';
+			this.getDom().nextElementSibling.classList.remove('ruleError');
+		}
 	}
 	getTokenCssClass(token){
 		let cssClass='';
@@ -123,38 +136,47 @@ class Line {
 				continue;
 			}
 			const cssClass = this.getTokenCssClass(token);
-			if (cssClass && this.formula) {
+			if (cssClass) {
+				let errorCssClass = '';
 				let cssMainOperand = '';
-				if (this.formula.connectives){
-					for (const connective of this.formula.connectives){
-						if (connective.pos == token.pos){
+				if (this.formula) {
+					if (this.formula.connectives){
+						for (const connective of this.formula.connectives){
+							if (connective.pos == token.pos){
+								cssMainOperand = 'mainOp';
+							}
+						}
+					} else if (this.formula.connective){
+						if (this.formula.connective.pos == token.pos){
+							cssMainOperand = 'mainOp';
+						}
+					} else if (this.formula.quantifier){
+						if (this.formula.quantifier.pos == token.pos){
+							cssMainOperand = 'mainOp';
+							variable = this.formula.variable;
+							skipToken = true;
+						}
+					}  else if (this.formula.operator){
+						if (this.formula.operator.pos == token.pos){
 							cssMainOperand = 'mainOp';
 						}
 					}
-				} else if (this.formula.connective){
-					if (this.formula.connective.pos == token.pos){
-						cssMainOperand = 'mainOp';
+					if (this.formula instanceof FormulaEquality) {
+						cssMainOperand = '';
 					}
-				} else if (this.formula.quantifier){
-					if (this.formula.quantifier.pos == token.pos){
-						cssMainOperand = 'mainOp';
-						variable = this.formula.variable;
-						skipToken = true;
+				} else {
+					console.log('error', this.error.token)
+					if (this.error && this.error.token.pos == token.pos) {
+						
+						errorCssClass = 'wavy';
 					}
-				}  else if (this.formula.operator){
-					if (this.formula.operator.pos == token.pos){
-						cssMainOperand = 'mainOp';
-					}
-				}
-				if (this.formula instanceof FormulaEquality) {
-					cssMainOperand = '';
 				}
 				let dimCssClass = '';
 				if (dim){
 					dimCssClass = 'dim';
 					//cssMainOperand = '';
 				}
-				const insert = `<span class='${cssClass} ${cssMainOperand} ${dimCssClass}'>${token.lexeme}${variable}</span>`;
+				const insert = `<span class='${cssClass} ${cssMainOperand} ${dimCssClass} ${errorCssClass}'>${token.lexeme}${variable}</span>`;
 				const insertPos = token.pos + offset;
 				const tokenLength = token.lexeme.length;
 				content = content.substring(0,insertPos) + insert + content.substring(insertPos+tokenLength);
