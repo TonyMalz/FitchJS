@@ -829,12 +829,17 @@ function handleKeydown(event) {
           }
           const line = editor.getLine(lineNo);
           let indentLevel = line.level;
-          if (event.shiftKey == true){
-            if (indentLevel > 0)
-                //close subproof
-                line.setLevel(--indentLevel);
-                dimLines(line.lineNumber);
-          } else {
+            if (event.shiftKey == true){
+                if (indentLevel > 0) {
+                    //close subproof
+                    line.setLevel(--indentLevel);
+                    dimLines(line.lineNumber);
+                }
+            } else {
+                if (line.isPremise) {
+                    tabProcessed = true;
+                    break;
+                }
                 // check level of previous line
                 const levelPrevLine = (lineNo > 1) ? editor.getLineByNumber(lineNo-1).dataset.level : 0;
                 if (levelPrevLine < indentLevel) {
@@ -845,7 +850,7 @@ function handleKeydown(event) {
                 //open subproof
                 line.setLevel(++indentLevel);
                 dimLines(line.lineNumber);
-          }
+            }
           tabProcessed = true;
           break;
         case "Backspace":
