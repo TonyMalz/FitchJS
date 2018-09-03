@@ -341,6 +341,9 @@ class Parser {
 
     parse(){
         try {
+            if (this.tokens.length == 1 && this.tokens[0].type == TokenType.EOF){
+                return new FormulaEmpty(this.tokens[0].line);
+            }
             const form = this.e0();
             this.checkIsAtEOF();
             return form;
@@ -558,7 +561,7 @@ class FormulaEmpty extends Formula {
         super();
         this.variable = variable; //Token
         this.line = line;
-        this.isPremise = true;
+        this.isPremise = false;
         this.isJustified = true;
     }
     *[Symbol.iterator](){
@@ -1734,8 +1737,13 @@ class Proof {
         return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
     }
     addPremise(premise){
-        const tokens = new Scanner(premise,++gLineNo).scanTokens();
+        if (premise instanceof Formula) {
+            premise.isPremise = true;
+            this.addFormula(premise);
+            return;
+        }
 
+        const tokens = new Scanner(premise,++gLineNo).scanTokens();
         if (tokens[0].type == TokenType.EOF){
             this.addFormula(new FormulaEmpty(++gLineNo));
         } else{

@@ -481,10 +481,10 @@ function handleKeyupRule(event) {
         console.log(ruleLineNumbers)
         let lines = [];
         for (let number of ruleLineNumbers) {
-            const line = editor.getLineByNumber(number);
+            const line = editor.getLine(number);
             if (line) {
-                line.classList.add('selectedLine');
-                lines.push(new Parser(new Scanner(line.textContent,number).scanTokens()).parse());
+                line.getDom().classList.add('selectedLine');
+                lines.push(line.formula);
             }
         }
 
@@ -494,34 +494,32 @@ function handleKeyupRule(event) {
             case "∧ Intro": {
                     console.log('AND Intro selected');
                     const rule = new RuleAndIntro(...lines);
-                    const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
-                    if (currentLine) {
-                        highlightFormulaParts(lineNo,TokenType.AND,...lines);
-                        currentLine.setRule(rule);
-                        if (currentLine.check()) {
-                            that.classList.add('ruleOk');
-                            that.classList.remove('ruleError');
-                        } else {
-                            const error = currentLine.rule.getError();
-                            console.log(error)
-                            that.classList.remove('ruleOk');
-                            that.classList.add('ruleError');
-
-                        }
+                    const line = editor.getLine(lineNo);
+                    if (line) {
+                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
+                    }
+                }
+            break;
+            case "→ Intro": {
+                    console.log('→ Intro selected');
+                    const rule = new RuleImplicationIntro(...lines);
+                    const line = editor.getLine(lineNo);
+                    if (line) {
+                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
                     }
                 }
             break;
             case "Reit": {
                     console.log('Reit selected');
                     const rule = new RuleReiteration(lines[0]);
-                    const currentLine = parseLineDiv(editor.getLineByNumber(lineNo));
-                    if (currentLine) {
-                        currentLine.setRule(rule);
-                        if (currentLine.check()) {
-                            that.classList.add('ruleOk');
-                        } else {
-                            that.classList.remove('ruleOk');
-                        }
+                    const line = editor.getLine(lineNo);
+                    if (line) {
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
                     }
                 }
             break;
@@ -580,7 +578,9 @@ function handleKeyupRule(event) {
                 tooltipElem = null;
                 selectionIndex = 0;
                 ruleSelected = true;
-                highlightFormulaParts(lineNo,TokenType.AND);
+                const line = editor.getLine(lineNo);
+                line.setRuleName(suggestion);
+                highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
                 SetCaretPosition(that,currentToken.pos + suggestion.length);
             }
             if (key == 'Escape') {
@@ -591,6 +591,7 @@ function handleKeyupRule(event) {
         }
     }
 }
+
 
 function handleKeyup(event) {
     editor.caretPos = getCaretPosition();
@@ -1149,7 +1150,8 @@ function handleFocus(event) {
     const that = event.target;
     const lineNo = parseInt(that.dataset.lineNumber);
     if (that.classList.contains('rule')) {
-        highlightFormulaParts(lineNo)
+        const line = editor.getLine(lineNo);
+        highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(),...line.ruleLines);
         //if rule was already selected, start at end
         if (that.textContent.length > 0){
             const indexColon = that.textContent.indexOf(':');
@@ -1237,7 +1239,10 @@ window.addEventListener("load", function(){
     editor.addLine('hans = peter');
     editor.addLine('Hans ∨ Peter ∨ Leo');
     editor.setSyntaxHighlighting(true);
+    editor.checkFitchLines();
     editor.undoStack = [];
+
+    editor.getProof().check();
 });
 
 

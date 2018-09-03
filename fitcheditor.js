@@ -4,10 +4,14 @@ class Line {
 		this.editor = editor;
 		this.level = 0; // greater 0 means it is a subproof
 		this.lineNumber;
-		this.content = ''; // raw text 
+		this.content = null; // raw text 
 		this.tokens = [];  // text tokens
 		this.formula; // parsed formula if valid content exists
-		this.rule;    // rule selection element
+		this.rule;    // rule 
+		this.ruleName = '';
+		this.ruleDomElement = null;
+		this.ruleLines = [];
+		this.ruleError = null;
 		this.isPremise = false;
 		this.DomElement = null;
 		this.formattedContent = ''; // html content XXX really needed?
@@ -16,6 +20,79 @@ class Line {
 	}
 	copy(){
 		return Object.assign({},this);
+	}
+	setRuleName(ruleName){
+		this.ruleName = ruleName;
+		const tokenType = this.getTokenTypeFromRuleName(ruleName);
+		if (this.formula && this.formula.getType() === tokenType){
+			this.getRuleDom().classList.add('ruleOpOk');
+		}
+	}
+	setRule(rule){
+		if (this.formula){
+			this.formula.setRule(rule);
+			this.checkRule();
+		}
+	}
+	checkRule(){
+		if (this.formula && this.formula.rule){
+			if (this.formula.check()) {
+			    this.getRuleDom().classList.add('ruleOk');
+			    this.getRuleDom().classList.remove('ruleError');
+			} else {
+			    this.ruleError = this.formula.rule.getError();
+			    console.log(this.ruleError)
+			    this.getRuleDom().classList.remove('ruleOk');
+			    this.getRuleDom().classList.add('ruleError');
+			}
+		}
+	}
+	getRuleDom(){
+		if (this.ruleDomElement)
+			return this.ruleDomElement;
+		this.ruleDomElement = this.getDom().nextElementSibling;
+		return this.ruleDomElement;
+	}
+	setRuleLines(lines){
+		this.ruleLines = lines;
+	}
+	getTokenTypeFromRuleName(rule=null) {
+	    let op = '';
+	    if (!rule){
+	    	op = this.ruleName.charAt(0);
+	    } else {
+	    	op = rule.charAt(0);
+	    }
+	    switch (op) {
+	        case '∧' :
+	            return (TokenType.AND);
+	            break;
+	        case '∨' :
+	            return (TokenType.OR);
+	            break;
+	        case '¬' :
+	            return (TokenType.NOT);
+	            break;
+	        case '→' :
+	            return (TokenType.IMPL);
+	            break;
+	        case '∀' :
+	            return (TokenType.FOR_ALL);
+	            break;
+	        case '∃' :
+	            return (TokenType.EXISTS);
+	            break;
+	        case '⊥' :
+	            return (TokenType.FALSE);
+	            break;
+	        case '↔' :
+	            return (TokenType.BI_IMPL);
+	            break;
+	        case '⇔' :
+	            return (TokenType.BI_IMPL);
+	            break;
+	    }
+	    return -1;
 	}
 	setLineNumber(lineNumber){
 		const element = this.getDom();
@@ -29,7 +106,7 @@ class Line {
 	    }
 	}
 	setContent(content){
-		if (this.content == content) return;
+		if (this.content === content) return;
 		this.content = content;
 
 		this.tokens = new Scanner(content,this.lineNumber).scanTokens();
@@ -38,13 +115,11 @@ class Line {
 				this.editor.enteredIdentifiers.add(token.lexeme);
 			}
 		}
-		if (this.content.trim() != ''){
 			this.formula = new Parser(this.tokens).parse();
 			if (!this.formula)
 				this.error = fitcherror;//XXX
 			else
 				this.error = null;
-		}
 
 		this.formattedContent = this.highlightTokens();
 
@@ -60,6 +135,8 @@ class Line {
 			this.getDom().nextElementSibling.textContent = '';
 			this.getDom().nextElementSibling.classList.remove('ruleError');
 		}
+
+		this.editor.updateProof();
 	}
 	getTokenCssClass(token){
 		let cssClass='';
@@ -164,6 +241,10 @@ class Line {
 					if (this.formula instanceof FormulaEquality) {
 						cssMainOperand = '';
 					}
+
+					if (this.formula.isJustified){
+						cssMainOperand = '';
+					}
 				} else {
 					console.log('error', this.error.token)
 					if (this.error && this.error.token.pos == token.pos) {
@@ -193,6 +274,7 @@ class Line {
 		}
 	}
 	setIsPremise(isPremise){
+		if(this.isPremise == isPremise) return;
 		this.isPremise = isPremise;
 		if (this.isPremise) {
 			this.getDom().classList.add('premise');
@@ -206,14 +288,17 @@ class Line {
 		if (this.formula)
 			this.formula.isPremise = isPremise;
 		this.editor.updateFitchlines();
+		this.editor.updateProof();
 	}
 	setLevel(level){
+		if (this.level == level) return;
 		this.level = level;
 		this.getDom();
 		this.DomElement.style.textIndent = (this.level * indentAmount) + 'px';//XXX FIXME
         this.DomElement.dataset.level = this.level;
         this.DomElement.style.zIndex = parseInt(100 - this.level);
         this.editor.checkFitchLines();
+        this.editor.updateProof();
 	}
 	getDom(){
 		if (this.DomElement)
@@ -250,6 +335,8 @@ class Editor {
 		this.numSteps = 0;
 		this.undoStack = [];
 		this.redoStack = [];
+
+		this.proof = null;
 	}
 	addPremise(text, lineNumber=null){
 		return this.addLine(text,lineNumber,true);
@@ -283,10 +370,11 @@ class Editor {
 		// add line to editor
 		const line = new Line(this);
 		line.lineNumber = lineNo;
+		this.lines.push(line);
+		this.lines.sort((a,b) =>  (a.lineNumber < b.lineNumber ? -1 : 1) );
 		line.setContent(text);
 		line.setLevel(level);
 		line.setIsPremise(isPremise);
-		this.lines.push(line);
 		
 		if (line.isPremise)
 			this.numPremises++;
@@ -294,9 +382,8 @@ class Editor {
 			this.numSteps++;
 		
 		this.numberOfLines = this.lines.length;
-		this.lines.sort((a,b) =>  (a.lineNumber < b.lineNumber ? -1 : 1) );
-		
 		this.undoStack.push(['add',line, new Date()]);
+		
 		console.log('added line:',line);
 		return line;
 	}
@@ -330,9 +417,12 @@ class Editor {
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return;
 		const prevLine = this.getLine(lineNumber);
-		if (prevLine && prevLine.isPremise)
-			return this.addPremise('',++lineNumber);
-		return this.addLine('',++lineNumber,false,prevLine.level);
+		if (prevLine ) {
+			if (prevLine.isPremise)
+				return this.addPremise('',++lineNumber);
+			return this.addLine('',++lineNumber,false,prevLine.level);
+		}
+		return this.addLine('',++lineNumber,false,0);
 	}
 	undo(){
 		let timeEventBefore = 0;
@@ -412,9 +502,6 @@ class Editor {
 			timeEventBefore = timeCurrentEvent;
 		}
 	}
-	removeCurrentLine(){
-		this.removeLine(this.currentLine);
-	}
 	removeLine(lineNumber){
 		if (lineNumber > this.numberOfLines || lineNumber < 1)
 			return null;
@@ -446,6 +533,7 @@ class Editor {
 			this.numSteps--;
 
 		this.checkFitchLines();
+		this.updateProof();
 		if (lineNumber >= this.numberOfLines){
 			return this.getLineByNumber(this.numberOfLines);
 		}
@@ -530,6 +618,35 @@ class Editor {
 	}
 	parseLine(text,lineNumber=0){
     	return new Parser(new Scanner(text.trim(),lineNumber).scanTokens()).parse();
+	}
+	updateProof() {
+		console.log('update proof .... ')
+		// XXX
+		gLineNo = 0;
+		const p = new Proof();
+		let prevLine = null
+		let subproofs = [p];
+		for (const line of this.lines) {
+			if (prevLine && prevLine.level < line.level) {
+				//open new subproof
+				const sp = new Proof();
+				line.isPremise = true;
+				subproofs[prevLine.level].addSubProof(sp);
+				subproofs[line.level] = sp;
+			} 
+			if (line.isPremise && line.formula){
+				subproofs[line.level].addPremise(line.formula);
+			} else if (line.formula) {
+				subproofs[line.level].addFormula(line.formula);
+			}
+				
+			prevLine = line;
+		}
+		p.getBoundVariables();
+		this.proof = p;
+	}
+	getProof(){
+		return this.proof;
 	}
 }
 
