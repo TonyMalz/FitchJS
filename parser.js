@@ -532,13 +532,15 @@ class Formula {
         this.isJustified = false;
         this.rule = null;
         this.line = 0;
+        this.type = -1;
     }
     check(){
         if (! (this.rule instanceof Rule)) {
             console.error('no rule given');
             return false;
         }
-        return this.rule.validate(this);
+        this.isJustified = this.rule.validate(this);
+        return this.isJustified;
     }
     setRule(rule) {
         this.rule = rule;
@@ -547,14 +549,37 @@ class Formula {
         yield null;
     }
     replaceVariable(oldVar,newVar){}
+    getType(){
+        return this.type;
+    }
 }
-
+class FormulaEmpty extends Formula {
+    constructor(line,variable='') {
+        super();
+        this.variable = variable; //Token
+        this.line = line;
+        this.isPremise = true;
+        this.isJustified = true;
+    }
+    *[Symbol.iterator](){
+        yield this.variable;
+    }
+    check(){
+        return true;
+    }
+    toString(){
+        return String(this.variable);
+    }
+}
 class FormulaUnary extends Formula {
     constructor(operator, right) {
         super();
         this.operator = operator; //Token
         this.right = right;
         this.line = operator.line;
+    }
+    getType(){
+        return this.operator.type;
     }
     toString(){
         return this.operator + this.right;
@@ -580,6 +605,9 @@ class FormulaBinary extends Formula {
         this.connective = connective; //Token
         this.right = right;
         this.line = left.line;
+    }
+    getType(){
+        return this.connective.type;
     }
     toString(){
         return '(' + this.left + ' ' + this.connective + ' ' + this.right + ')';
@@ -615,6 +643,9 @@ class FormulaQuantified extends Formula {
         this.right = right;
         this.line = quantifier.line;
     }
+    getType(){
+        return this.quantifier.type;
+    }
     toString(){
         const right = this.right instanceof FormulaQuantified ? this.right : '('+this.right+')';
         return this.quantifier + this.variable + right;
@@ -633,6 +664,13 @@ class FormulaQuantified extends Formula {
     replaceVariableName(oldName,newName){
         this.right.replaceVariableName(oldName,newName);
     }
+    getBoundVariables(vars) {
+        if (vars instanceof Set)
+        vars.add(this.variable.lexeme);
+        if (this.right instanceof FormulaQuantified){
+            this.right.getBoundVariables(vars);
+        }
+    }
 }
 class FormulaAnd extends Formula {
     constructor(terms, connectives ) {
@@ -640,6 +678,9 @@ class FormulaAnd extends Formula {
         this.terms = terms; //Array Formula
         this.connectives = connectives; //Array Token
         this.line = terms[0].line;
+    }
+    getType(){
+        return TokenType.AND;
     }
     isEqualTo(formula){
         if (formula instanceof FormulaAnd){
@@ -677,6 +718,9 @@ class FormulaOr extends Formula {
         this.connectives = connectives; //Array Token
         this.line = terms[0].line;
     }
+    getType(){
+        return TokenType.OR;
+    }
     toString(){
         return '(' + this.terms.join(' ∨ ') + ')';
     }
@@ -699,6 +743,9 @@ class Term extends Formula {
         super();
         this.name = name; //Token
         this.line = name.line;
+    }
+    getType(){
+        return this.name.type;
     }
     toString(){
         let str = '';
@@ -745,6 +792,9 @@ class Predicate extends Formula {
         super();
         this.name = name; //Token
         this.line = name.line;
+    }
+    getType(){
+        return this.name.type;
     }
     toString(){
         let str = '';
@@ -806,6 +856,14 @@ class Rule {
     error(code,msg){
         this.errorCode = code;
         this.errorMessage = msg;
+    }
+    getLines(){
+        if (this.source){
+            return [this.source];
+        }
+        if (this.sources){
+            return this.sources;
+        }
     }
 }
 class RuleAndElim extends Rule{
@@ -1552,7 +1610,7 @@ class RuleUniversalIntro extends Rule{
                 continue;
             if (String(term) !== String(sourceTerm)){
                 newVar = String(term);
-                oldVar = String(sourceTerm);
+                oldVar = String(sourceTerm); // variable which was introduced in subproof
                 break;
             }
         }
@@ -1562,7 +1620,12 @@ class RuleUniversalIntro extends Rule{
             console.error('No variable given for subproof');
             return false;
         }
-        // FIXME check var in current and all other parent proofs
+        // check introduced var in current and all other parent proofs
+        // FIXME check for other variables outside the current subproof
+        if (this.source.parent.getBoundVariables().has(oldVar)) {
+            console.error(`Variable ${oldVar} occurs outside the subproof in which it is introduced, which is not allowed`)
+            return false;
+        }
         if (oldVar !== String(premise)){
             console.error(`Expected free variable '${oldVar}' instead of '${premise}' in premise `);
             return false;
@@ -1624,12 +1687,17 @@ class RuleExistentialELim extends Rule{
                 continue;
             if (String(term) !== String(premiseTerm)){
                 oldVar = String(term); // x
-                newVar = String(premiseTerm); // a
+                newVar = String(premiseTerm); // variable which was introduced in subproof
                 break;
             }
         }
-        // FIXME check var in current and all other parent proofs
 
+        // check introduced var in current and all other parent proofs
+        // FIXME check for other variables outside the current subproof
+        if (subProof.parent.getBoundVariables().has(newVar)) {
+            console.error(`Variable ${newVar} occurs outside the subproof in which it is introduced, which is not allowed`)
+            return false;
+        }
         // check if free var does not exist in conluded term
         for (const term of formula){
             if (! (term instanceof TermVariable))
@@ -1655,19 +1723,49 @@ class Proof {
         this.parent = null;
         this.goal = null;
         this.steps = [];
-        this.variables = new Map();
+        this.boundVariables = new Set();
         this.stepNo = 0;
         this.line = 0;
+        this.lineNo = 0;
         if (goal !== null)
             this.setGoal(goal);
     }
+    parseLine(text) {
+        return new Parser(new Scanner(text,++gLineNo).scanTokens()).parse();
+    }
     addPremise(premise){
-        const formula = parseLine(premise);
-        formula.isPremise = true;
-        this.addFormula(formula);
+        const tokens = new Scanner(premise,++gLineNo).scanTokens();
+
+        if (tokens[0].type == TokenType.EOF){
+            this.addFormula(new FormulaEmpty(++gLineNo));
+        } else{
+            if (tokens[0].type == TokenType.IDENTIFIER) {
+                const name = tokens[0].lexeme;    
+                if (name[0] == name[0].toLowerCase()) {
+                    const variable = new TermVariable(tokens[0]);
+                    variable.isPremise = true;
+                    this.addFormula(variable);
+                    return;
+                }
+            } 
+            const formula = new Parser(tokens).parse();
+            formula.isPremise = true;
+            this.addFormula(formula);
+        }
     }
     getPremises(){
         return this.steps.filter(f => f.isPremise);
+    }
+    getBoundVariables(){
+        if (this.parent instanceof Proof) {
+            this.boundVariables = this.parent.getBoundVariables();
+        }
+        for (const formula of this.steps) {
+            if (formula instanceof FormulaQuantified) {
+                formula.getBoundVariables(this.boundVariables);
+            }
+        }
+        return this.boundVariables;
     }
     addFormula(formula, rule=null){
         if (!(formula instanceof Formula)){
