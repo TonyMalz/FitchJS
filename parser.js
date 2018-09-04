@@ -1383,6 +1383,10 @@ class RuleImplicationIntro extends Rule{
             console.error('Expected formula of type Implication')
             return false;
         }
+        if(this.source.line <= formula.line) {
+            console.error('The subproof must occur before the current formula')
+            return false;
+        }
 
         const antecedent = String(formula.left);
         const consequent = String(formula.right);
@@ -1784,7 +1788,19 @@ class Proof {
         this.steps[++this.stepNo] = formula;
     }
     Step(lineNo){
-        return this.steps[lineNo];
+        for (const step of this.steps){
+            if (step instanceof Proof){
+                const line = step.Step(lineNo);
+                if (line) {
+                    return line;
+                }
+            }
+            if (!(step instanceof Formula)) continue;
+            if (step.line == lineNo){
+                return step;
+            }
+        }
+        return null;
     }
     getSteps(){
         return this.steps.filter(f => !f.isPremise);
@@ -1793,7 +1809,6 @@ class Proof {
         this.steps.splice(lineNo,1)
     }
     setRuleForStep(lineNo, rule){}
-    
     addSubProof(subProof){
         if (!(subProof instanceof Proof)) {
             console.error('Expected subproof');
@@ -1803,11 +1818,24 @@ class Proof {
         subProof.line = ++this.stepNo
         this.steps[this.stepNo] = subProof;
     }
-
     setGoal(goal){
         this.goal = new Parser(new Scanner(goal).scanTokens()).parse();
     }
-
+    getSubproofByLineNumber(lineNo) {
+        for (const step of this.steps) {
+            if (!step) continue;
+            if (step.line && step.line == lineNo) {
+                return this;
+            }
+            if (step instanceof Proof){
+                const sp = step.getSubproofByLineNumber(lineNo);
+                if (sp) {
+                    return sp;
+                }
+            }
+        }
+        return null;
+    }
     checkStep(lineNo){}
     check(){
         // XXX FIXME

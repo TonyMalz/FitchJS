@@ -504,10 +504,16 @@ function handleKeyupRule(event) {
             break;
             case "→ Intro": {
                     console.log('→ Intro selected');
-                    const rule = new RuleImplicationIntro(...lines);
+                    
+                    let rule;
+                    if (ruleLineNumbers.size >= 1){
+                        rule = new RuleImplicationIntro(editor.proof.Step(5));
+                    } else {
+                        rule = new RuleImplicationIntro(...lines);
+                    }
                     const line = editor.getLine(lineNo);
                     if (line) {
-                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
+                        highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
                         line.setRule(rule);
                         line.setRuleLines(lines);
                     }
@@ -1168,11 +1174,14 @@ function handleFocus(event) {
         editor.selectedLines = [that];
         // check current level and dim other subproofs if any
         dimLines(lineNo);
+
     }
 }
 
 function dimLines(lineNo){
-    const startLevel = editor.getLine(lineNo).level;
+    const currentLine = editor.getLine(lineNo);
+    currentLine.unDimLine();
+    const startLevel = currentLine.level;
     let descented = false
     // undim next lines of same suproof level 
     for (let nextLineNo = lineNo+1; nextLineNo <= editor.numberOfLines; nextLineNo++ ){

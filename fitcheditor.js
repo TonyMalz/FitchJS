@@ -104,6 +104,12 @@ class Line {
 	    	element.nextElementSibling.id = `r${this.lineNumber}`;
 	    	element.nextElementSibling.dataset.lineNumber = this.lineNumber;
 	    }
+	    if (this.formula) {
+	    	this.formula.line = lineNumber;
+	    }
+	    for (const token of this.tokens) {
+	    	token.line = lineNumber;
+		}
 	}
 	setContent(content){
 		if (this.content === content) return;
@@ -115,11 +121,11 @@ class Line {
 				this.editor.enteredIdentifiers.add(token.lexeme);
 			}
 		}
-			this.formula = new Parser(this.tokens).parse();
-			if (!this.formula)
-				this.error = fitcherror;//XXX
-			else
-				this.error = null;
+		this.formula = new Parser(this.tokens).parse();
+		if (!this.formula)
+			this.error = fitcherror;//XXX
+		else
+			this.error = null;
 
 		this.formattedContent = this.highlightTokens();
 
@@ -621,20 +627,20 @@ class Editor {
 	}
 	updateProof() {
 		console.log('update proof .... ')
-		// XXX
-		gLineNo = 0;
 		const p = new Proof();
 		let prevLine = null
 		let subproofs = [p];
 		for (const line of this.lines) {
+			let spOpened = false;
 			if (prevLine && prevLine.level < line.level) {
 				//open new subproof
+				spOpened = true;
 				const sp = new Proof();
-				line.isPremise = true;
 				subproofs[prevLine.level].addSubProof(sp);
 				subproofs[line.level] = sp;
+				sp.line = line.lineNumber;
 			} 
-			if (line.isPremise && line.formula){
+			if ((line.isPremise || spOpened) && line.formula){
 				subproofs[line.level].addPremise(line.formula);
 			} else if (line.formula) {
 				subproofs[line.level].addFormula(line.formula);
