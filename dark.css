@@ -50,9 +50,9 @@ aside {
 .row {
     display: grid;
     grid-gap: 25px;
-    grid-template-columns: 600px 200px auto;
+    grid-template-columns: 600px 200px 300px;
     grid-template-rows: max-content;
-    grid-template-areas: "line rule .";
+    grid-template-areas: "line rule hint";
 }
 
 .line
@@ -159,6 +159,33 @@ aside {
     content: 'X';
     position: absolute;
     right: 10px;
+}
+
+@keyframes hintFadeIn {
+    from {border-color: #2e2e2e; color: #2e2e2e;}
+    to {border-color: #af9242;; color: #ffe81fd1;}
+}
+
+.hint {
+    grid-area: hint;
+    color: #2e2e2e;
+    font-size: 10px;
+    text-align: center;
+    border: 1px dashed ;
+    border-radius: 5px;
+    padding: 5px;
+    align-self: center;
+    user-select: none;
+    -moz-user-select: none;
+    cursor: pointer;
+    position: relative;
+    text-shadow: none;
+}
+.showhint {
+    animation-name: hintFadeIn;
+    animation-duration: .5s;
+    animation-delay: 3s;
+    animation-fill-mode: forwards;
 }
 
 .tooltip {
@@ -350,3 +377,4 @@ aside {
     animation-duration: .7s;
     animation-timing-function: ease-out;
 }
+

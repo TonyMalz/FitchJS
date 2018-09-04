@@ -478,6 +478,7 @@ function handleKeyupRule(event) {
         document.querySelectorAll('.line').forEach(line => {
             line.classList.remove('selectedLine');
         });
+
         console.log(ruleLineNumbers)
         let lines = [];
         for (let number of ruleLineNumbers) {
@@ -495,6 +496,7 @@ function handleKeyupRule(event) {
                     console.log('AND Intro selected');
                     const rule = new RuleAndIntro(...lines);
                     const line = editor.getLine(lineNo);
+                    line.clearHint();
                     if (line) {
                         highlightFormulaParts(lineNo,TokenType.AND ,...lines);
                         line.setRule(rule);
@@ -504,15 +506,14 @@ function handleKeyupRule(event) {
             break;
             case "→ Intro": {
                     console.log('→ Intro selected');
-                    let rule;
+                    const line = editor.getLine(lineNo);
+                    let rule = new RuleImplicationIntro();
                     if (ruleLineNumbers.size >= 1){
                         const lineNumber = ruleLineNumbers.values().next().value;
                         const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
                         rule = new RuleImplicationIntro(subproof);
-                    } else {
-                        rule = new RuleImplicationIntro(...lines);
                     }
-                    const line = editor.getLine(lineNo);
+                    
                     if (line) {
                         highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
                         line.setRule(rule);
@@ -586,6 +587,7 @@ function handleKeyupRule(event) {
                 selectionIndex = 0;
                 ruleSelected = true;
                 const line = editor.getLine(lineNo);
+                line.clearHint();
                 line.setRuleName(suggestion);
                 highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
                 SetCaretPosition(that,currentToken.pos + suggestion.length);
@@ -1142,6 +1144,7 @@ function handleBlur(event) {
         // remove highlights/hints
         const line = editor.getLine(lineNo);
         line.setSyntaxHighlighting(true);
+        line.clearHint();
     }
     if (that.classList.contains('line')) {
         const line = editor.getLine(lineNo);
@@ -1169,6 +1172,11 @@ function handleFocus(event) {
             }
         } else {
             ruleSelected = false;
+            if (line.formula) {
+                const formula = line.formula;
+                if (!(formula instanceof FormulaEquality || formula instanceof Predicate))
+                    line.showHint("Please identify the 'weakest' operator and select the corresponding rule");
+            }
         }
     }
     if (that.classList.contains('line')) {

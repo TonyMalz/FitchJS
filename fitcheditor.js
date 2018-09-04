@@ -39,8 +39,11 @@ class Line {
 			if (this.formula.check()) {
 			    this.getRuleDom().classList.add('ruleOk');
 			    this.getRuleDom().classList.remove('ruleError');
-			} else {
+			    this.clearHint();
+			   } else {
 			    this.ruleError = this.formula.rule.getError();
+			    const hint = this.ruleError.message;
+			    this.showHint(hint);
 			    console.log(this.ruleError)
 			    this.getRuleDom().classList.remove('ruleOk');
 			    this.getRuleDom().classList.add('ruleError');
@@ -55,6 +58,14 @@ class Line {
 	}
 	setRuleLines(lines){
 		this.ruleLines = lines;
+	}
+	showHint(text){
+ 		document.getElementById(`h${this.lineNumber}`).textContent = text;
+		document.getElementById(`h${this.lineNumber}`).classList.add('showhint');
+	}
+	clearHint(){
+		document.getElementById(`h${this.lineNumber}`).textContent = '';
+		document.getElementById(`h${this.lineNumber}`).classList.remove('showhint');
 	}
 	getTokenTypeFromRuleName(rule=null) {
 	    let op = '';
@@ -579,6 +590,7 @@ class Editor {
 		return `<div class="row">
 					<div data-line-number=${this.padLineNumber(lineNumber)} data-level=0 id="l${lineNumber}" class="line${premiseClass}${highlightClass}" spellcheck="false">${content}</div>
 		        	<div class="rule" contenteditable="true" data-line-number=${lineNumber} id="r${lineNumber}"  placeholder="add rule" spellcheck="false"></div>
+		        	<div class="hint" data-line-number=${lineNumber} id="h${lineNumber}" ></div>
 		        </div>`
 	}
 	padLineNumber(lineNumber){

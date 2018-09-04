@@ -356,7 +356,7 @@ class Parser {
 
     checkIsAtEOF(){
         if(this.peek().type != TokenType.EOF){
-            throw this.error(this.peek(), `Did not expect '${this.peek()}' at this position`);
+            throw this.error(this.peek(), `Did not expect '${this.peek()}' at this position. Did you forget the connective?`);
         }
     }
 
@@ -394,7 +394,7 @@ class Parser {
                 }
                 throw this.error(this.peek(), "Expected '(' or a quantifier after a quantor");
             }
-            throw this.error(peek(),"Expected a variable after quantification");
+            throw this.error(this.peek(),"Expected a variable after quantification");
         }
         return this.e4();
     }
@@ -478,7 +478,7 @@ class Parser {
                 const prevtoken = this.previous();
                 let asPremise = prevtoken.lexeme;
                 asPremise = asPremise.charAt(0).toUpperCase() + asPremise.slice(1);
-                throw this.error(prevtoken, `Expected an equal sign '=' after '${prevtoken}' or did you mean '${asPremise}' instead? `);
+                throw this.error(prevtoken, `Did you mean '${asPremise}' instead of '${prevtoken}' ?`);
             }
         }
         if(this.match(TokenType.IDENTIFIER)){
@@ -929,7 +929,7 @@ class RuleAndIntro extends Rule{
             }
             if (!found){
                 console.error(`Did not find ${term} in any source formula`);
-                this.error(4,`You have to select a line that contains the formula '${term}' `);
+                this.error(4,`Please select a line that contains '${term}' `);
                 return false;
             }
             found = false;
@@ -1386,6 +1386,10 @@ class RuleImplicationIntro extends Rule{
         }
         if(this.source.line >= formula.line) {
             console.error('The subproof must occur before the current formula')
+            return false;
+        }
+        if (this.source.parent == null) {
+            console.error('You have to select a subproof')
             return false;
         }
         if (this.source.parent !== formula.proof) {
