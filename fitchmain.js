@@ -504,10 +504,11 @@ function handleKeyupRule(event) {
             break;
             case "→ Intro": {
                     console.log('→ Intro selected');
-                    
                     let rule;
                     if (ruleLineNumbers.size >= 1){
-                        rule = new RuleImplicationIntro(editor.proof.Step(5));
+                        const lineNumber = ruleLineNumbers.values().next().value;
+                        const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
+                        rule = new RuleImplicationIntro(subproof);
                     } else {
                         rule = new RuleImplicationIntro(...lines);
                     }
@@ -1384,22 +1385,18 @@ function highlightFormulaParts(lineNumber,...matches){
     const domLine = editor.getLineByNumber(lineNumber);
     const formula = line.formula;
     if (!formula) {
-        console.log(fitcherror.token)
-        const errorpos = fitcherror.token.pos;
-        const errorLength = fitcherror.token.lexeme.length;
-        const term = fitcherror.token.lexeme;
-        domLine.innerHTML = domLine.textContent.substring(0,errorpos) + `<span class="wavy">${term} </span>` + domLine.textContent.substring(errorpos+errorLength);
         return;
     }
-        
+    
+    if (formula instanceof FormulaEquality) return; 
 
     let matchOperator = null;
-    let matchFormulas = []
+    let selectedLines = []
     for (const match of matches){
         if (typeof match == 'number' ) {
             matchOperator = match;
         } else if (match instanceof Formula){
-            matchFormulas.push(match);
+            selectedLines.push(match);
         }
     }
 
@@ -1417,16 +1414,29 @@ function highlightFormulaParts(lineNumber,...matches){
         let foundForm = false;
         if (beforeFormula) {
             const matchForm = String(beforeFormula);
-            for (const form of matchFormulas){
+            for (const form of selectedLines){
                 if (String(form) == matchForm){
                     foundForm = true;
                     break;
                 }
             }
         }
-        const formMatch = foundForm ? matchFormulaClassName : '';
+        const matchBefore = foundForm ? matchFormulaClassName : '';
+
+        const afterFormula = parseText(after);
+        foundForm = false;
+        if (afterFormula) {
+            const matchForm = String(afterFormula);
+            for (const form of selectedLines){
+                if (String(form) == matchForm){
+                    foundForm = true;
+                    break;
+                }
+            }
+        }
+        const matchAfter = foundForm ? matchFormulaClassName : '';
         const tokenCss = line.getTokenCssClass(connective);
-        domLine.innerHTML = `<span class='connectivePart${formMatch}'>${before}</span><span class='connectiveHighlightBinary${opMatch} ${tokenCss}'>${connective.lexeme}</span><span class='connectivePart'>${after}</span>`;
+        domLine.innerHTML = `<span class='connectivePart${matchBefore}'>${before}</span><span class='connectiveHighlightBinary${opMatch} ${tokenCss}'>${connective.lexeme}</span><span class='connectivePart${matchAfter}'>${after}</span>`;
     } else if (formula.connectives) {
         // and / or
         let html = '';
@@ -1442,7 +1452,7 @@ function highlightFormulaParts(lineNumber,...matches){
             let foundForm = false;
             if (beforeFormula) {
                 const matchForm = String(beforeFormula);
-                for (const form of matchFormulas){
+                for (const form of selectedLines){
                     if (String(form) == matchForm){
                         foundForm = true;
                         break;
@@ -1459,7 +1469,7 @@ function highlightFormulaParts(lineNumber,...matches){
         let foundForm = false;
         if (beforeFormula) {
             const matchForm = String(beforeFormula);
-            for (const form of matchFormulas){
+            for (const form of selectedLines){
                 if (String(form) == matchForm){
                     foundForm = true;
                     break;

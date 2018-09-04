@@ -536,6 +536,7 @@ class Formula {
         this.rule = null;
         this.line = 0;
         this.type = -1;
+        this.proof = null;
     }
     check(){
         if (! (this.rule instanceof Rule)) {
@@ -1383,8 +1384,12 @@ class RuleImplicationIntro extends Rule{
             console.error('Expected formula of type Implication')
             return false;
         }
-        if(this.source.line <= formula.line) {
+        if(this.source.line >= formula.line) {
             console.error('The subproof must occur before the current formula')
+            return false;
+        }
+        if (this.source.parent !== formula.proof) {
+            console.error('The subproof must occur on the same level as the current formula')
             return false;
         }
 
@@ -1598,11 +1603,19 @@ class RuleUniversalIntro extends Rule{
             return false;
         }
         if (! (formula instanceof FormulaQuantified)) {
-            console.error('Expected formula of type Negation')
+            console.error('Expected formula of type FormulaQuantified')
             return false;
         }
         if (formula.quantifier.type !== TokenType.FOR_ALL ) {
             console.error('Expected universal quantified formula')
+            return false;
+        }
+        if(this.source.line >= formula.line) {
+            console.error('The subproof must occur before the current formula')
+            return false;
+        }
+        if (this.source.parent !== formula.proof) {
+            console.error('The subproof must occur on the same level as the current formula')
             return false;
         }
 
@@ -1785,22 +1798,11 @@ class Proof {
         }
         if (rule instanceof Rule)
             formula.setRule(rule);
+        formula.proof = this;
         this.steps[++this.stepNo] = formula;
     }
     Step(lineNo){
-        for (const step of this.steps){
-            if (step instanceof Proof){
-                const line = step.Step(lineNo);
-                if (line) {
-                    return line;
-                }
-            }
-            if (!(step instanceof Formula)) continue;
-            if (step.line == lineNo){
-                return step;
-            }
-        }
-        return null;
+        return this.steps[lineNo];
     }
     getSteps(){
         return this.steps.filter(f => !f.isPremise);
@@ -1824,14 +1826,14 @@ class Proof {
     getSubproofByLineNumber(lineNo) {
         for (const step of this.steps) {
             if (!step) continue;
-            if (step.line && step.line == lineNo) {
-                return this;
-            }
             if (step instanceof Proof){
                 const sp = step.getSubproofByLineNumber(lineNo);
                 if (sp) {
                     return sp;
                 }
+            }
+            if (step.line && step.line == lineNo) {
+                return this;
             }
         }
         return null;

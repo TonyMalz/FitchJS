@@ -139,8 +139,12 @@ aside {
     text-shadow: none;
 }
 .ruleOk {
-    border: 1px solid rgba(76, 175, 80, 0.79);
+    border: 1px solid rgba(76, 175, 80, 0.79) !important;
     color: #adff2fba;
+}
+.ruleOpOk {
+    color: #adff2fba;
+    border-color: rgba(222, 184, 135, 0.35);
 }
 .ruleOk:after {
     content: '✓';
@@ -259,7 +263,11 @@ aside {
 }
 
 .selectedLine {
-    box-shadow: inset 0px 0px 1px 1px #00f3ff, 2px 1px 4px 3px rgba(10, 10, 0, 0.5);
+    box-shadow: inset 0px 0px 1px 0px #00f3ff, 2px 1px 4px 3px rgba(10, 10, 0, 0.5);
+    border-radius: 4px
+}
+.selectedLine > .dim {
+    color: inherit;
 }
 
 .fitchline ~ .rule {
@@ -292,12 +300,12 @@ aside {
 }
 .highlightOperatorOk {
     border: 1px transparent;
+    color: #adff2fba !important;
 }
 .highlightFormulaOk {
     border: 1px transparent;
-    color: inherit;
+    color: #adff2fba;
 }
-
 .tokenAnd, .tokenOr, .tokenImpl, .tokenBiImpl, .tokenNot {
     color: #f92672;
 

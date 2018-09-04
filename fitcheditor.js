@@ -134,10 +134,10 @@ class Line {
 		// XXX check rule
 
 		// XXX FIXME: don't use rule selection for error messages
-		if(this.error) {
+		if(this.error && this.getDom().nextElementSibling) {
 			this.getDom().nextElementSibling.textContent = this.error.message;
 			this.getDom().nextElementSibling.classList.add('ruleError');
-		} else {
+		} else if(this.getDom().nextElementSibling) {
 			this.getDom().nextElementSibling.textContent = '';
 			this.getDom().nextElementSibling.classList.remove('ruleError');
 		}
@@ -631,21 +631,22 @@ class Editor {
 		let prevLine = null
 		let subproofs = [p];
 		for (const line of this.lines) {
-			let spOpened = false;
 			if (prevLine && prevLine.level < line.level) {
 				//open new subproof
-				spOpened = true;
 				const sp = new Proof();
 				subproofs[prevLine.level].addSubProof(sp);
 				subproofs[line.level] = sp;
 				sp.line = line.lineNumber;
+				sp.addPremise(line.formula);
+				prevLine = line;
+				continue;
 			} 
-			if ((line.isPremise || spOpened) && line.formula){
+			if (line.isPremise && line.formula){
 				subproofs[line.level].addPremise(line.formula);
 			} else if (line.formula) {
+				line.formula.isPremise=false;
 				subproofs[line.level].addFormula(line.formula);
 			}
-				
 			prevLine = line;
 		}
 		p.getBoundVariables();
