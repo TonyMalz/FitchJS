@@ -54,6 +54,9 @@ aside {
     grid-template-rows: max-content;
     grid-template-areas: "line rule hint";
 }
+.row:nth-child(even) > .line {
+    background-color: #2a2a2a;
+}
 
 .line
 {   
