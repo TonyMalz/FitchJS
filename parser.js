@@ -918,7 +918,7 @@ class RuleAndIntro extends Rule{
             for (const sourceTerm of this.sources){
                 if(sourceTerm.line > term.line){
                     console.error('Source formula must occur before current formula')
-                    this.error(3,'The line number of the current formula must be greater than the selected line');
+                    this.error(3,'Please only select lines that come before the current line');
                     return false;
                 }
                 //console.log(String(term),String(sourceTerm))
@@ -1376,24 +1376,29 @@ class RuleImplicationIntro extends Rule{
         this.source = source; // subproof
     }
     validate(formula) {
-        if (! (this.source instanceof Proof)) {
-            console.error('Expected subproof for RuleImplicationIntro as source')
-            return false;
-        }
         if (! (formula instanceof FormulaImpl)) {
             console.error('Expected formula of type Implication')
+            this.error(0,'The current line is not an implication. Please choose another rule');
+            return false;
+        }
+        if (! (this.source instanceof Proof) || this.source.parent == null) {
+            console.error('Expected subproof for RuleImplicationIntro as source')
+            this.error(0,'Please select a subproof');
             return false;
         }
         if(this.source.line >= formula.line) {
             console.error('The subproof must occur before the current formula')
+            this.error(0,'Please select a subproof that comes before the current formula')
             return false;
         }
         if (this.source.parent == null) {
-            console.error('You have to select a subproof')
+            console.error('You have to select a subproof');
+            this.error(0,'Please select a subproof')
             return false;
         }
         if (this.source.parent !== formula.proof) {
             console.error('The subproof must occur on the same level as the current formula')
+            this.error(0,'Please select a subproof that occurs on the same level as the current formula')
             return false;
         }
 
@@ -1411,10 +1416,12 @@ class RuleImplicationIntro extends Rule{
         }
         if (!foundAntecedent) {
             console.error('Antecedent missing in (detached) premise of subproof')
+            this.error(0,`Please select a subproof that assumes '${antecedent}'`)
             return false
         }
         if (!foundConsequent) {
             console.error('Consequent not found in subproof')
+            this.error(0,`Please select a subproof that contains the formula '${consequent}'`)
             return false
         }
         return true;
