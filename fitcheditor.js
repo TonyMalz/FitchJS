@@ -67,7 +67,7 @@ class Line {
  		hint.style.top = coords.top + 'px';
  		
  		hint.textContent = text;
- 		hint.style.width = (coords.width - 42) + 'px';
+ 		hint.style.width = (coords.width/1.7) + 'px';
 		hint.classList.add('showhint');
 
 

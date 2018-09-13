@@ -475,63 +475,6 @@ function handleKeyupRule(event) {
 
     if (ruleSelected){
         triggerAutocompletion = false;
-        document.querySelectorAll('.line').forEach(line => {
-            line.classList.remove('selectedLine');
-        });
-
-        console.log(ruleLineNumbers)
-        let lines = [];
-        for (let number of ruleLineNumbers) {
-            const line = editor.getLine(number);
-            if (line) {
-                line.getDom().classList.add('selectedLine');
-                lines.push(line.formula);
-            }
-        }
-
-        const indexColon = that.textContent.indexOf(':');
-        const rule = that.textContent.substring(0,indexColon);
-        switch (rule) {
-            case "∧ Intro": {
-                    console.log('AND Intro selected');
-                    const rule = new RuleAndIntro(...lines);
-                    const line = editor.getLine(lineNo);
-                    line.clearHint();
-                    if (line) {
-                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-            case "→ Intro": {
-                    console.log('→ Intro selected');
-                    const line = editor.getLine(lineNo);
-                    let rule = new RuleImplicationIntro();
-                    if (ruleLineNumbers.size >= 1){
-                        const lineNumber = ruleLineNumbers.values().next().value;
-                        const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
-                        rule = new RuleImplicationIntro(subproof);
-                    }
-                    
-                    if (line) {
-                        highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-            case "Reit": {
-                    console.log('Reit selected');
-                    const rule = new RuleReiteration(lines[0]);
-                    const line = editor.getLine(lineNo);
-                    if (line) {
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-        }
     }
 
     if (triggerAutocompletion) {
@@ -597,6 +540,66 @@ function handleKeyupRule(event) {
                 tooltipElem = null;
                 currentToken = null;
             }
+        }
+    }
+
+    if (ruleSelected){
+        document.querySelectorAll('.line').forEach(line => {
+            line.classList.remove('selectedLine');
+        });
+
+        console.log(ruleLineNumbers)
+        let lines = [];
+        for (let number of ruleLineNumbers) {
+            const line = editor.getLine(number);
+            if (line) {
+                line.getDom().classList.add('selectedLine');
+                lines.push(line.formula);
+            }
+        }
+
+        const indexColon = that.textContent.indexOf(':');
+        const rule = that.textContent.substring(0,indexColon);
+        switch (rule) {
+            case "∧ Intro": {
+                    console.log('AND Intro selected');
+                    const rule = new RuleAndIntro(...lines);
+                    const line = editor.getLine(lineNo);
+                    line.clearHint();
+                    if (line) {
+                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
+                    }
+                }
+            break;
+            case "→ Intro": {
+                    console.log('→ Intro selected');
+                    const line = editor.getLine(lineNo);
+                    let rule = new RuleImplicationIntro();
+                    if (ruleLineNumbers.size >= 1){
+                        const lineNumber = ruleLineNumbers.values().next().value;
+                        const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
+                        rule = new RuleImplicationIntro(subproof);
+                    }
+                    
+                    if (line) {
+                        highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
+                    }
+                }
+            break;
+            case "Reit": {
+                    console.log('Reit selected');
+                    const rule = new RuleReiteration(lines[0]);
+                    const line = editor.getLine(lineNo);
+                    if (line) {
+                        line.setRule(rule);
+                        line.setRuleLines(lines);
+                    }
+                }
+            break;
         }
     }
 }
