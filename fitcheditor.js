@@ -60,12 +60,22 @@ class Line {
 		this.ruleLines = lines;
 	}
 	showHint(text){
- 		document.getElementById(`h${this.lineNumber}`).textContent = text;
-		document.getElementById(`h${this.lineNumber}`).classList.add('showhint');
+		const hint = document.getElementById(`h${this.lineNumber}`);
+ 		
+ 		const coords = this.getDom().getBoundingClientRect();
+ 		hint.style.left= (coords.left) + 'px';
+ 		hint.style.top = coords.top + 'px';
+ 		
+ 		hint.textContent = text;
+ 		hint.style.width = (coords.width - 42) + 'px';
+		hint.classList.add('showhint');
+
+
 	}
 	clearHint(){
-		document.getElementById(`h${this.lineNumber}`).textContent = '';
-		document.getElementById(`h${this.lineNumber}`).classList.remove('showhint');
+		const hint = document.getElementById(`h${this.lineNumber}`);
+		hint.textContent = '';
+		hint.classList.remove('showhint');
 	}
 	getTokenTypeFromRuleName(rule=null) {
 	    let op = '';

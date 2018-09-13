@@ -1175,7 +1175,7 @@ function handleFocus(event) {
             if (line.formula) {
                 const formula = line.formula;
                 if (!(formula instanceof FormulaEquality || formula instanceof Predicate))
-                    line.showHint("Please identify the 'weakest' operator and select the corresponding rule");
+                    line.showHint("Please identify the 'weakest' operator of this formula and select the corresponding rule");
             }
         }
     }
