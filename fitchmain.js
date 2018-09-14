@@ -1139,7 +1139,7 @@ function handleBlur(event) {
         document.querySelectorAll('.line').forEach(line => {
             line.classList.remove('selectedLine');
         });
-        that.contentEditable = false;
+        //that.contentEditable = false;
         //remove whitespace
         if(that.textContent.trim() == ''){
             that.textContent='';
@@ -1183,9 +1183,11 @@ function handleFocus(event) {
         }
     }
     if (that.classList.contains('line')) {
+        const line = editor.getLine(lineNo);
         editor.selectedLines = [that];
         // check current level and dim other subproofs if any
         dimLines(lineNo);
+        line.setSyntaxHighlighting(false);
 
     }
 }
