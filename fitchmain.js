@@ -18,7 +18,7 @@ function createToolTipToken(that,line) {
     if (formula instanceof FormulaOr) {
         htmlIntro = '';
         htmlElim = `<li> ${operator} <button data-line-number=${lineNumber} class='elim'>Elim</button>
-                        <input type='text' class='tooltipTokenValue'></input>
+                        Formula you will conclude: <input type='text' class='tooltipTokenValue'></input>
                     </li>`;
 
     }
@@ -810,6 +810,7 @@ function handleKeydown(event) {
             break;
           }
           console.log('Enter');
+          const isLastPremise = that.classList.contains('fitchline');
           const next = editor.addEmptyLineAfter(lineNo);
           
           //split content at cursor position
@@ -818,8 +819,8 @@ function handleKeydown(event) {
           const current = editor.getLine(lineNo);
           current.setContent(textLeft);
           next.setContent(textRight);
-          // if cursor was at end of line and it was the last premise ceate a new step instead of a new premise
-          if (textRight.trim().length == 0 && current.isPremise && current.getDom().classList.contains('fitchline')) {
+          // if cursor was at end of line and it was the last premise create a new step instead of a new premise
+          if (textRight.trim().length == 0 && isLastPremise) {
             next.setIsPremise(false);
           }
           SetCaretPosition(next,0);
@@ -1261,6 +1262,9 @@ window.addEventListener("load", function(){
     editor.addLine('¬∀x∀y(Peter(x) ∧ Hans(y)) → ∃z(Leo(z))');
     editor.addLine('hans = peter');
     editor.addLine('Hans ∨ Peter ∨ Leo');
+    for (var i = 0; i < 15; i++) {
+        editor.addLine('');
+    }
     editor.setSyntaxHighlighting(true);
     editor.checkFitchLines();
     editor.undoStack = [];
@@ -1381,7 +1385,7 @@ function getCaretPosition() {
 function showCaretPos(event) {
   let el = event.target;
   let caretPosEl = document.getElementById("caretPos");
-  if (!editor.selectedLines)
+  if (!editor.selectedLines || !caretPosEl)
     return;
   const line = editor.selectedLines[0].dataset.lineNumber;
   caretPosEl.textContent = "Caret position in line: " + line + " at index: " + editor.caretPos; //getCaretCharacterOffsetWithin(el);

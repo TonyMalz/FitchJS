@@ -64,7 +64,7 @@ class Line {
  		
  		const coords = this.getDom().getBoundingClientRect();
  		hint.style.left= (coords.left) + 'px';
- 		hint.style.top = coords.top + 'px';
+ 		hint.style.top = coords.top -38 + 'px';
  		
  		hint.textContent = text;
  		hint.style.width = (coords.width/1.7) + 'px';
