@@ -44,7 +44,7 @@ header select {
     display: grid;
     grid-template-areas: 'settings ruleDefs';
     justify-self: end;
-    grid-gap: 25px;
+    grid-gap: 18px;
 }
 .settings {
     grid-area: settings;
@@ -88,8 +88,6 @@ main
     overflow: hidden;
     position: relative;
     overflow-y: auto;
-    height: 90%;
-    max-width: 950px;
 }
 main::-webkit-scrollbar {
     width: 12px;
@@ -118,10 +116,13 @@ aside {
     grid-area: sidepanel;
     color: gray;
 }
+
 .settingsPanel {
     width: 100%;
-    padding-right: 10px;
     text-shadow: 1px 1px 2px #030303;
+    position: relative;
+    left: 326px;
+    display: none;
 }
 .settingsPanel > h1{
     font-size: 1rem;
@@ -133,6 +134,24 @@ aside {
 }
 .settingsPanel > table td {
     padding: 2px 10px 2px 10px;
+}
+.closeSettings {
+    position: absolute;
+    right: 0;
+    top: -40px;
+    padding: 20px;
+    cursor: pointer;
+}
+@keyframes settingsFadeIn {
+    from { opacity: 0;}
+    to {opacity: 1;
+    transform: translateX(-326px);}
+}
+.showSettings {
+    display: block;
+    animation-name: settingsFadeIn;
+    animation-duration: .5s;
+    animation-fill-mode: forwards;
 }
 .shortcut {
     font-family: 'Consolas';
@@ -497,8 +516,7 @@ aside {
 }
 
 
-
-
+/*Toggle buttons for settings*/
 .tgl {
   display: none;
 }

@@ -23,70 +23,71 @@
         </header>
         <main id="editor"></main>
         <aside>
-            <div class='settingsPanel'>
-            <h1>Shortcuts</h1>
-            <table>
-                <tr>
-                    <td class="shortcut">Ctrl + d</td>
-                    <td>Delete current line</td>
-                </tr>
-                <tr>
-                    <td class="shortcut">Ctrl + z</td>
-                    <td>Undo last action</td>
-                </tr>
-                <tr>
-                    <td class="shortcut">Ctrl + y</td>
-                    <td>Redo last action</td>
-                </tr>
-                <tr>
-                    <td class="shortcut">Ctrl + r</td>
-                    <td>Jump to rule selection</td>
-                </tr>
-                 <tr>
-                    <td class="shortcut">Ctrl + Shift + r</td>
-                    <td>Jump jump back to formula</td>
-                </tr>
-                <tr>
-                    <td class="shortcut">Tab</td>
-                    <td>Create subproof</td>
-                </tr>
-                <tr>
-                    <td class="shortcut">Shift + Tab</td>
-                    <td>Close subproof</td>
-                </tr>
-            </table>
-            <h1>Help Functions</h1>
-            
-            <table>
-                <tr>
-                    <td>Syntax highlighting</td>
-                    <td><input class="tgl tgl-light" id="cb1" type="checkbox" checked><label class="tgl-btn" for="cb1"></label></td>
-                </tr>
-                <tr>
-                    <td>Show syntax errors</td>
-                    <td><input class="tgl tgl-light" id="cb2" type="checkbox" checked><label class="tgl-btn" for="cb2"></label></td>
-                </tr>
-                <tr>
-                    <td>Enable autocomplete</td>
-                    <td><input class="tgl tgl-light" id="cb3" type="checkbox" ><label class="tgl-btn" for="cb3"></label></td>
-                </tr>
-                <tr>
-                    <td>Highlight main operator</td>
-                    <td><input class="tgl tgl-light" id="cb4" type="checkbox" checked><label class="tgl-btn" for="cb4"></label></td>
-                </tr>
-                 <tr>
-                    <td>Dim irrelevant lines</td>
-                    <td><input class="tgl tgl-light" id="cb5" type="checkbox"><label class="tgl-btn" for="cb5"></label></td>
-                </tr>
-                <tr>
-                    <td>Quick rule application</td>
-                    <td><input class="tgl tgl-light" id="cb6" type="checkbox" checked><label class="tgl-btn" for="cb6"></label></td>
-                </tr>
-                <tr>
-                    <td>Show rule hints</td>
-                    <td><input class="tgl tgl-light" id="cb7" type="checkbox"><label class="tgl-btn" for="cb7"></label></td>
-                </tr>
-            </table>
+            <div id="settings" class='settingsPanel'>
+                <div class="closeSettings">x</div>
+                <h1>Shortcuts</h1>
+                <table>
+                    <tr>
+                        <td class="shortcut">Ctrl + d</td>
+                        <td>Delete current line</td>
+                    </tr>
+                    <tr>
+                        <td class="shortcut">Ctrl + z</td>
+                        <td>Undo last action</td>
+                    </tr>
+                    <tr>
+                        <td class="shortcut">Ctrl + y</td>
+                        <td>Redo last action</td>
+                    </tr>
+                    <tr>
+                        <td class="shortcut">Ctrl + r</td>
+                        <td>Jump to rule selection</td>
+                    </tr>
+                     <tr>
+                        <td class="shortcut">Ctrl + Shift + r</td>
+                        <td>Jump jump back to formula</td>
+                    </tr>
+                    <tr>
+                        <td class="shortcut">Tab</td>
+                        <td>Create subproof</td>
+                    </tr>
+                    <tr>
+                        <td class="shortcut">Shift + Tab</td>
+                        <td>Close subproof</td>
+                    </tr>
+                </table>
+                <h1>Help Functions</h1>
+                
+                <table>
+                    <tr>
+                        <td>Syntax highlighting</td>
+                        <td><input class="tgl tgl-light" id="cb1" type="checkbox" checked><label class="tgl-btn" for="cb1"></label></td>
+                    </tr>
+                    <tr>
+                        <td>Show syntax errors</td>
+                        <td><input class="tgl tgl-light" id="cb2" type="checkbox" checked><label class="tgl-btn" for="cb2"></label></td>
+                    </tr>
+                    <tr>
+                        <td>Enable autocomplete</td>
+                        <td><input class="tgl tgl-light" id="cb3" type="checkbox" ><label class="tgl-btn" for="cb3"></label></td>
+                    </tr>
+                    <tr>
+                        <td>Highlight main operator</td>
+                        <td><input class="tgl tgl-light" id="cb4" type="checkbox" checked><label class="tgl-btn" for="cb4"></label></td>
+                    </tr>
+                     <tr>
+                        <td>Dim irrelevant lines</td>
+                        <td><input class="tgl tgl-light" id="cb5" type="checkbox"><label class="tgl-btn" for="cb5"></label></td>
+                    </tr>
+                    <tr>
+                        <td>Quick rule application</td>
+                        <td><input class="tgl tgl-light" id="cb6" type="checkbox" checked><label class="tgl-btn" for="cb6"></label></td>
+                    </tr>
+                    <tr>
+                        <td>Show rule hints</td>
+                        <td><input class="tgl tgl-light" id="cb7" type="checkbox"><label class="tgl-btn" for="cb7"></label></td>
+                    </tr>
+                </table>
             </div>
         </aside>
     </div>

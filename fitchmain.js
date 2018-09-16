@@ -54,6 +54,7 @@ function handleMouse(event) {
     if (that.classList.contains('tooltipTokenValue')){
         return;
     }
+    
     if (that.nodeName == 'SPAN'){
         console.log('span clicked')
         if (tooltipToken) {
@@ -103,6 +104,12 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
+
+            if (that.parentElement.classList.contains('settings') || that.classList.contains('closeSettings')) {
+                console.log('show settings')
+                document.getElementById('settings').classList.toggle('showSettings');
+            }
+
             if (tooltipToken) {
                 tooltipToken.remove();
                 tooltipToken = null;
