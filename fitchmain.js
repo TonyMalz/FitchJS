@@ -474,7 +474,11 @@ function handleKeyupRule(event) {
         tooltipRuleSelection.remove();
         tooltipRuleSelection = null;
     }
-
+    if (that.textContent.trim().length == 0) {
+        that.textContent = '';
+        showRuleSelection(that,event.key);
+        return;
+    }
     let triggerAutocompletion = false;
     if (key.length == 1 ) {
         triggerAutocompletion = true;
