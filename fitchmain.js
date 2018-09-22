@@ -48,13 +48,36 @@ function createToolTipToken(that,line) {
 }
 
 let mousedown = null;
+let startLineSelectionForRuleLine = null;
 function handleMouse(event) {
     console.log(event)
     let that = event.target;
     if (that.classList.contains('tooltipTokenValue')){
         return;
     }
-    
+
+     // handle rule section via mouse
+    if (that.nodeName == 'LI' && that.dataset.rule){
+        event.preventDefault();
+        console.log('rule selected:',that.dataset.rule)
+        const suggestion = that.dataset.rule;
+        const lineNo = parseInt(that.dataset.line);
+        const line = editor.getLine(lineNo);
+        line.getRuleDom().textContent = suggestion;
+        ruleSelected = true;
+        tooltipRuleSelection.remove();
+        tooltipRuleSelection = null;
+        startLineSelectionForRuleLine = lineNo;
+        line.clearHint();
+        line.setRuleName(suggestion);
+
+        highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
+        SetCaretPosition(line.getRuleDom(),suggestion.length);
+        //checkRule(lineNo);
+        return;
+    }
+
+    // handle weakest operator help
     if (that.nodeName == 'SPAN'){
         console.log('span clicked')
         if (tooltipToken) {
@@ -82,19 +105,41 @@ function handleMouse(event) {
     
     switch (event.type) {
         case 'mousedown':
-            if (that.classList.contains('rule')) {
-                //if rule was already selected, start after current rule name
-                that.contentEditable = true;
-                if (that.textContent.length > 0){
-                    const indexColon = that.textContent.indexOf(':');
-                    if (indexColon >= 0){
-                        event.preventDefault();
-                        SetCaretPosition(that,indexColon+1);
-                        ruleSelected = true;
+            if (startLineSelectionForRuleLine !== null) {
+                const lineNo = parseInt(that.dataset.lineNumber);
+                if (lineNo < startLineSelectionForRuleLine) {
+                    const selectedLine = editor.getLine(lineNo);
+                    const ruleLine = editor.getLine(startLineSelectionForRuleLine);
+                    const rule = ruleLine.getRuleDom();
+                    const ruleLines = rule.textContent.split(':')[1].trim();
+                    let comma = '';
+                    if (ruleLines.length > 0 && ruleLines[ruleLines.length-1] != ','){
+                        comma = ',';
                     }
-                } else {
-                    ruleSelected = false;
+                    // check if subproof was selected
+
+                    let newNode;
+                    if (selectedLine.level > ruleLine.level) {
+                        console.log('selected suproof')
+                        const sp = editor.getProof().getSubproofByLineNumber(lineNo);
+                        const spLastLineNo = lineNo + sp.stepNo-1;
+                        newNode =  document.createTextNode(`${comma}${lineNo}-${spLastLineNo}`);                       
+                    } else {
+                        newNode = document.createTextNode(`${comma}${lineNo}`);
+                    }
+                    
+                    console.log('line selected for rule')
+                    const range = window.getSelection().getRangeAt(0);
+                    range.insertNode(newNode);
+                    range.collapse();
+                    
+                    checkRule(startLineSelectionForRuleLine);
+                    
+                    event.preventDefault();
+                    return;
                 }
+            }
+            if (that.classList.contains('rule')) {
                 break;
             }
             editor.selectedLines = null;
@@ -104,6 +149,9 @@ function handleMouse(event) {
             }
             break;
         case 'mouseup':
+           
+            if (that.classList.contains('rule'))
+                return;
 
             if (that.parentElement.classList.contains('settings') || that.classList.contains('closeSettings')) {
                 console.log('show settings')
@@ -115,7 +163,7 @@ function handleMouse(event) {
                 tooltipToken = null;
 
                 // Tactics
-                if (event.target.classList.contains('intro')){
+                if (that.classList.contains('intro')){
                     // INTRO Rules
                     let lineNo = parseInt(event.target.dataset.lineNumber);
                     const line = editor.getLine(lineNo);
@@ -192,8 +240,7 @@ function handleMouse(event) {
                 editor.setSyntaxHighlighting(true);
                 editor.checkFitchLines();
             }
-            if (that.classList.contains('rule'))
-                return;
+            
             if (mousedown !== null && Math.abs(mousedown.clientX - event.clientX) < 3){
                 // only update if a line was selected
                 if (that.classList.contains('line') || that.parentNode.classList.contains('line')){
@@ -320,13 +367,14 @@ let lineKeydown = 0;
 function handleKeydownRule(event){
     console.log('rule keydown')
     const that = event.target;
-    const caretPos = getCaretPosition();
     const key = event.key;
+
+    const caretPos = getCaretPosition();
     const lineNo = parseInt(that.dataset.lineNumber);
     switch (key) {
         case ":":
         case "Enter":
-            if (tooltipElem){
+            if (tooltipRuleSelection){
                 break;
             }
             if (lineNo == editor.numberOfLines){
@@ -341,7 +389,7 @@ function handleKeydownRule(event){
             enterProcessed = true;
             break;
         case "ArrowDown":
-            if (tooltipElem){
+            if (tooltipRuleSelection){
               break;
             }
             if (lineNo < editor.numberOfLines) {
@@ -350,7 +398,7 @@ function handleKeydownRule(event){
             }
             break;
         case "ArrowUp":
-            if (tooltipElem){
+            if (tooltipRuleSelection){
                 break;
             }
             if (lineNo > 1) {
@@ -377,15 +425,15 @@ function handleKeydownRule(event){
                 ruleSelected = false;
             } else if (that.textContent.trim() == '') {
                 // go back to end of line
-                const line = editor.getLine(lineNo);
-                line.setContent(line.content);//strip HTML
-                SetCaretPosition(line,line.content.length);
+                // const line = editor.getLine(lineNo);
+                // line.setSyntaxHighlighting(false);//XXX strip HTML
+                // SetCaretPosition(line,line.content.length);
             } else {
                 return;
             }
             break
         case "Tab":
-            if(tooltipElem){
+            if(tooltipRuleSelection){
                 break;
             }
             if(event.shiftKey){
@@ -422,45 +470,10 @@ function handleKeyupRule(event) {
     const that = event.target;
     const lineNo = parseInt(that.dataset.lineNumber);
 
-    // get token under caret position
-    let currentToken = null;
-    const caretPos = getCaretPosition();
-    const tokens = new Scanner(that.textContent, that.dataset.lineNumber).scanTokens();
-    
-    const ruleLineNumbers = new Set();
-    for (let i=0; i<tokens.length; i++) {
-        if (tokens[i].type == TokenType.NUMBER){
-            ruleLineNumbers.add(tokens[i].literal);
-            // check for number range
-            if(tokens[i+1].type == TokenType.MINUS && tokens[i+2].type == TokenType.NUMBER) {
-                const end = tokens[i+2].literal;
-                if (end > 100)
-                    continue;
-                for(let start = (tokens[i].literal+1); start <= end; start++){
-                    ruleLineNumbers.add(start);
-                }
-                i+=2;
-            }
-        }
+    if (tooltipRuleSelection) {
+        tooltipRuleSelection.remove();
+        tooltipRuleSelection = null;
     }
-    for (let token of tokens) {
-        const tokenEnd = token.pos + token.lexeme.length;
-        if (token.pos <= caretPos &&  caretPos <= tokenEnd) {
-            currentToken = token;
-            break;
-        }
-    }
-    console.log('currentToken', currentToken)
-    if (tooltipElem) {
-        tooltipElem.remove();
-        tooltipElem = null;
-    }
-
-    //no autocompletion if lines were changed between key presses
-    if (lineNo != lineKeydown) {
-        return;
-    }
-
 
     let triggerAutocompletion = false;
     if (key.length == 1 ) {
@@ -485,11 +498,8 @@ function handleKeyupRule(event) {
     }
 
     if (triggerAutocompletion) {
-        //search from beginnig of current token until caret position
-        // let searchString = currentToken.lexeme.substring(0,caretPos - currentToken.pos);
         let searchString = that.textContent;
         console.log('search', searchString)
-        if (searchString.length != 0){
             let results = suggestRules(searchString);
             if (results.size == 0)
                 return;
@@ -499,118 +509,193 @@ function handleKeyupRule(event) {
                 selectionIndex = results.size-1;
             }
             console.log('sel index', selectionIndex);
-
             let tooltipHtml = '<ul>';
             results = Array.from(results) 
             for (let i in results) {
                 const description = results[i][1][1];
                 if (selectionIndex == i)
-                    tooltipHtml += `<li data-value='${results[i][0]}' class='tooltipHighlight'>${description}`;
+                    tooltipHtml += `<li data-line='${lineNo}' data-rule='${results[i][0]}' class='tooltipHighlight'>${description}</li>`;
                 else
-                    tooltipHtml += `<li>${description}`;
+                    tooltipHtml += `<li data-line='${lineNo}' data-rule='${results[i][0]}'>${description}</li>`;
             }
             tooltipHtml += '</ul>';
-            tooltipElem = document.createElement('div');
-            tooltipElem.className = 'tooltipRule';
-            tooltipElem.innerHTML = tooltipHtml;
-            document.body.append(tooltipElem);
+            tooltipRuleSelection = document.createElement('div');
+            tooltipRuleSelection.className = 'tooltipRule';
+            tooltipRuleSelection.innerHTML = tooltipHtml;
+            document.body.append(tooltipRuleSelection);
 
             // position it below line
             const coords = that.getBoundingClientRect();
-            const range = document.createRange();
-            range.setStart(that.childNodes[0],currentToken.pos);
-            currentTokenLeft = range.getBoundingClientRect().left;
-            let left = currentTokenLeft - 10;
+            let left = coords.left;
             if (left < 0) left = 0; // don't cross the left window edge
 
             let top = coords.top + that.offsetHeight;
             
-            tooltipElem.style.left = left + 'px';
-            tooltipElem.style.top = top + 'px';
+            tooltipRuleSelection.style.left = left + 'px';
+            tooltipRuleSelection.style.top = top + 'px';
             
-            if ((key == 'Tab' || key == 'Enter')) {
+            if ((key == 'Tab' && !tabProcessed) || key == 'Enter') {
                 // rule was selected
                 const suggestion = results[selectionIndex][0];
                 that.textContent = suggestion;
-                tooltipElem.remove();
-                tooltipElem = null;
+                tooltipRuleSelection.remove();
+                tooltipRuleSelection = null;
                 selectionIndex = 0;
                 ruleSelected = true;
                 const line = editor.getLine(lineNo);
                 line.clearHint();
                 line.setRuleName(suggestion);
                 highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
-                SetCaretPosition(that,currentToken.pos + suggestion.length);
+                SetCaretPosition(that,suggestion.length);
             }
             if (key == 'Escape') {
-                tooltipElem.remove();
-                tooltipElem = null;
+                tooltipRuleSelection.remove();
+                tooltipRuleSelection = null;
                 currentToken = null;
             }
-        }
     }
 
     if (ruleSelected){
-        document.querySelectorAll('.line').forEach(line => {
-            line.classList.remove('selectedLine');
-        });
-
-        console.log(ruleLineNumbers)
-        let lines = [];
-        for (let number of ruleLineNumbers) {
-            const line = editor.getLine(number);
-            if (line) {
-                line.getDom().classList.add('selectedLine');
-                lines.push(line.formula);
-            }
-        }
-
-        const indexColon = that.textContent.indexOf(':');
-        const rule = that.textContent.substring(0,indexColon);
-        switch (rule) {
-            case "∧ Intro": {
-                    console.log('AND Intro selected');
-                    const rule = new RuleAndIntro(...lines);
-                    const line = editor.getLine(lineNo);
-                    line.clearHint();
-                    if (line) {
-                        highlightFormulaParts(lineNo,TokenType.AND ,...lines);
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-            case "→ Intro": {
-                    console.log('→ Intro selected');
-                    const line = editor.getLine(lineNo);
-                    let rule = new RuleImplicationIntro();
-                    if (ruleLineNumbers.size >= 1){
-                        const lineNumber = ruleLineNumbers.values().next().value;
-                        const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
-                        rule = new RuleImplicationIntro(subproof);
-                    }
-                    
-                    if (line) {
-                        highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-            case "Reit": {
-                    console.log('Reit selected');
-                    const rule = new RuleReiteration(lines[0]);
-                    const line = editor.getLine(lineNo);
-                    if (line) {
-                        line.setRule(rule);
-                        line.setRuleLines(lines);
-                    }
-                }
-            break;
-        }
+        checkRule(lineNo);
     }
 }
 
+function checkRule(lineNo){
+    const currentLine = editor.getLine(lineNo);
+    const tokens = new Scanner(currentLine.getRuleDom().textContent, lineNo).scanTokens();
+    
+    const ruleLineNumbers = new Set();
+    for (let i=0; i<tokens.length; i++) {
+        if (tokens[i].type == TokenType.NUMBER){
+            ruleLineNumbers.add(tokens[i].literal);
+            // check for number range i.e. 3-6
+            if(tokens[i+1].type == TokenType.MINUS && tokens[i+2].type == TokenType.NUMBER) {
+                const end = tokens[i+2].literal;
+                if (end > 100)
+                    continue;
+                for(let start = (tokens[i].literal+1); start <= end; start++){
+                    ruleLineNumbers.add(start);
+                }
+                i+=2;
+            }
+        }
+    }
+    document.querySelectorAll('.line').forEach(line => {
+        line.classList.remove('selectedLine');
+    });
+
+    let lines = [];
+    for (let number of ruleLineNumbers) {
+        const line = editor.getLine(number);
+        // highlight selected lines for current rule
+        if (line) {
+            line.getDom().classList.add('selectedLine');
+            line.unDimLine();
+            lines.push(line.formula);
+        }
+    }
+
+    const indexColon = currentLine.ruleName.indexOf(':');
+    const rule = currentLine.ruleName.substring(0,indexColon);
+    switch (rule) {
+        case "∧ Intro": {
+                console.log('AND Intro selected');
+                const rule = new RuleAndIntro(...lines);
+                const line = editor.getLine(lineNo);
+                line.clearHint();
+                if (line) {
+                    highlightFormulaParts(lineNo,TokenType.AND ,...lines);
+                    line.setRule(rule);
+                    line.setRuleLines(lines);
+                }
+            }
+        break;
+        case "→ Intro": {
+                console.log('→ Intro selected');
+                const line = editor.getLine(lineNo);
+                let rule = new RuleImplicationIntro();
+                if (ruleLineNumbers.size >= 1){
+                    const lineNumber = ruleLineNumbers.values().next().value;
+                    const subproof = editor.proof.getSubproofByLineNumber(lineNumber);
+                    rule = new RuleImplicationIntro(subproof);
+                }
+                
+                if (line) {
+                    highlightFormulaParts(lineNo,TokenType.IMPL,...lines);
+                    line.setRule(rule);
+                    line.setRuleLines(lines);
+                }
+            }
+        break;
+        case "Reit": {
+                console.log('Reit selected');
+                const rule = new RuleReiteration(lines[0]);
+                const line = editor.getLine(lineNo);
+                if (line) {
+                    line.setRule(rule);
+                    line.setRuleLines(lines);
+                }
+            }
+        break;
+    }
+}
+let tooltipRuleSelection = null;
+function showRuleSelection(that,key) {
+    const lineNo = parseInt(that.dataset.lineNumber)
+    let results = suggestRules('');
+    if (results.size == 0)
+        return;
+    if (selectionIndex < 0) {
+        selectionIndex = 0;
+    } else if (selectionIndex >= results.size) {
+        selectionIndex = results.size-1;
+    }
+    console.log('sel index', selectionIndex);
+    let tooltipHtml = '<ul>';
+    results = Array.from(results) 
+    for (let i in results) {
+        const description = results[i][1][1];
+        if (selectionIndex == i)
+            tooltipHtml += `<li data-line='${lineNo}' data-rule='${results[i][0]}' class='tooltipHighlight'>${description}</li>`;
+        else
+            tooltipHtml += `<li data-line='${lineNo}' data-rule='${results[i][0]}'>${description}</li>`;
+    }
+    tooltipHtml += '</ul>';
+    tooltipRuleSelection = document.createElement('div');
+    tooltipRuleSelection.className = 'tooltipRule';
+    tooltipRuleSelection.innerHTML = tooltipHtml;
+    document.body.append(tooltipRuleSelection);
+
+    // position it below line
+    const coords = that.getBoundingClientRect();
+    let left = coords.left;
+    if (left < 0) left = 0; // don't cross the left window edge
+
+    let top = coords.top + that.offsetHeight;
+    
+    tooltipRuleSelection.style.left = left + 'px';
+    tooltipRuleSelection.style.top = top + 'px';
+    
+    if ((key == 'Tab' || key == 'Enter')) {
+        // rule was selected
+        const suggestion = results[selectionIndex][0];
+        that.textContent = suggestion;
+        tooltipRuleSelection.remove();
+        tooltipRuleSelection = null;
+        selectionIndex = 0;
+        ruleSelected = true;
+        const line = editor.getLine(lineNo);
+        line.clearHint();
+        line.setRuleName(suggestion);
+        highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
+        SetCaretPosition(that,currentToken.pos + suggestion.length);
+    }
+    if (key == 'Escape') {
+        tooltipRuleSelection.remove();
+        tooltipRuleSelection = null;
+        currentToken = null;
+    }
+}
 
 function handleKeyup(event) {
     editor.caretPos = getCaretPosition();
@@ -840,12 +925,13 @@ function handleKeydown(event) {
 
           console.log('Tab');
           //rule selection
+          // jump to rule selection if at end of line
           if(that.textContent.trim().length > 0 && caretPos == that.textContent.length){
             console.log('jump to rule selection')
+            tabProcessed = true;
             if(that.nextElementSibling) {
                 that.nextElementSibling.focus();
             }
-            tabProcessed = true;
             break;
           }
           const line = editor.getLine(lineNo);
@@ -1147,15 +1233,25 @@ function handleBlur(event) {
         document.querySelectorAll('.line').forEach(line => {
             line.classList.remove('selectedLine');
         });
-        //that.contentEditable = false;
-        //remove whitespace
+        //remove whitespace and rule highlight colours
         if(that.textContent.trim() == ''){
             that.textContent='';
+            that.classList.remove('ruleError');
+            that.classList.remove('ruleOk');
+            that.classList.remove('ruleOpOk');
         }
         // remove highlights/hints
         const line = editor.getLine(lineNo);
         line.setSyntaxHighlighting(true);
         line.clearHint();
+        // remove tooltip
+        if (tooltipRuleSelection) {
+            tooltipRuleSelection.remove();
+            tooltipRuleSelection = null;
+        }
+        // disable line selection for rule
+        startLineSelectionForRuleLine = null;
+
     }
     if (that.classList.contains('line')) {
         const line = editor.getLine(lineNo);
@@ -1172,17 +1268,19 @@ function handleFocus(event) {
     const lineNo = parseInt(that.dataset.lineNumber);
     if (that.classList.contains('rule')) {
         const line = editor.getLine(lineNo);
+        startLineSelectionForRuleLine = lineNo;
         highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(),...line.ruleLines);
         //if rule was already selected, start at end
         if (that.textContent.length > 0){
             const indexColon = that.textContent.indexOf(':');
             if (indexColon >= 0){
-                event.preventDefault();
                 SetCaretPosition(that,that.textContent.length);
                 ruleSelected = true;
+                checkRule(lineNo);
             }
         } else {
             ruleSelected = false;
+            showRuleSelection(that,event.key);
             if (line.formula) {
                 const formula = line.formula;
                 if (!(formula instanceof FormulaEquality || formula instanceof Predicate))

@@ -40,7 +40,8 @@ class Line {
 			    this.getRuleDom().classList.add('ruleOk');
 			    this.getRuleDom().classList.remove('ruleError');
 			    this.clearHint();
-			   } else {
+			   } 
+			else {
 			    this.ruleError = this.formula.rule.getError();
 			    const hint = this.ruleError.message;
 			    this.showHint(hint);

@@ -908,7 +908,7 @@ class RuleAndIntro extends Rule{
         });
         if (!(formula instanceof FormulaAnd)) {
             console.error('Expected formula to validate to be of type FormulaAnd');
-            this.error(2,'The formula of the current line is not well formed');
+            this.error(2,'For ∧ Intro to work, the current formula has to be connected via a logical AND (∧)');
             return false;
         }
 

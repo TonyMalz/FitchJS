@@ -206,12 +206,13 @@ aside {
 }
 .line:hover
 {   
-    background-color: rgb(65, 65, 65) !important;
+    /*background-color: rgb(65, 65, 65) !important;*/
+    border-bottom: 1px solid #365e64c7;
 }
 .line:focus
 {   
     border-bottom: 1px solid teal;
-    background-color: rgb(65, 65, 65) !important;
+    /*background-color: rgb(65, 65, 65) !important;*/
 }
 .line:read-write:focus {
      outline: none;
@@ -503,6 +504,11 @@ aside {
     animation-timing-function: ease-out;
 }
 
+
+.ruleSelectableLines::before {
+    /*box-shadow: inset -3px 1px 0px 11px #795548 !important;*/
+    color: white !important;
+}
 
 /*Toggle buttons for settings*/
 .tgl {
