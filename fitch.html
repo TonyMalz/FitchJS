@@ -23,12 +23,7 @@
         </header>
         <main id="editor"></main>
         <aside>
-            <div id='fitchRules' class='fitchRules'>
-                <div class="closeRules">x</div>
-                <h1>Fitch Rules</h1>
-                Fitch rules here...
-            </div>
-            <div id="settings" class='settingsPanel'>
+             <div id="settings" class='settingsPanel'>
                 <div class="closeSettings">x</div>
                 <h1>Shortcuts</h1>
                 <table>
@@ -93,6 +88,24 @@
                         <td><input class="tgl tgl-light" id="cb7" type="checkbox"><label class="tgl-btn" for="cb7"></label></td>
                     </tr>
                 </table>
+            </div>
+            <div id='fitchRules' class='fitchRules'>
+                <div class="closeRules">x</div>
+                <h1>Fitch Rules</h1>
+                    <h2>Conjunction Introduction (∧ Intro)</h2>
+                    <img src="and_intro.png" width="280px">
+                    <h3> Description: </h3>
+                    <p>If you have two ore more formulae i.e. <span class='code'>Tuesday</span> and <span class='code'>Raining</span> in two separate lines you can combine those predicates in one line by connecting them with a logical AND (∧) like so: <span class='code'>Tuesday ∧ Raining</span>.<br>
+                    Also the order of appearence does not matter, as <span class='code'>Raining ∧ Tuesday</span> is also a valid conclusion.<br>
+                    In general the symbol ϕ stands for any well formed formula within the current proof.
+                    </p>
+                    <h3> Examples: </h3>
+                    <p>
+                        <img src="and_intro_e1.png" width="100%">
+                    </p>
+                    <p>
+                        <img src="and_intro_e2.png" width="100%">
+                    </p>
             </div>
         </aside>
     </div>

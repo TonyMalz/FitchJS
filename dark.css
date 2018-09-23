@@ -116,8 +116,22 @@ aside {
     grid-area: sidepanel;
     color: gray;
     position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+aside::-webkit-scrollbar {
+    width: 12px;
 }
 
+aside::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+    border-radius: 5px;
+}
+
+aside::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
+}
 .settingsPanel, .fitchRules {
     width: 100%;
     text-shadow: 1px 1px 2px #030303;
@@ -166,6 +180,24 @@ aside {
     margin-top: 30px;
 }
 
+.fitchRules  h2{
+    font-size: 1.2rem;
+}
+
+.fitchRules  h3{
+    font-size: 1rem;
+}
+
+.fitchRules  p {
+    width: 20rem;
+    font-size: 0.9rem;
+    padding-right: 5px;
+}
+.code {
+    font-family: "Consolas";
+    color: #cccccc;
+}
+
 .shortcut {
     font-family: 'Consolas';
 }
@@ -180,7 +212,7 @@ aside {
 .row {
     display: grid;
     grid-gap: 25px;
-    grid-template-columns: 700px minmax(150px,max-content) 0px;
+    grid-template-columns: 680px minmax(150px,max-content) 0px;
     grid-template-rows: max-content;
     grid-template-areas: "line rule hint";
 }
