@@ -115,9 +115,10 @@ aside {
     font-family: sans-serif;
     grid-area: sidepanel;
     color: gray;
+    position: relative;
 }
 
-.settingsPanel {
+.settingsPanel, .fitchRules {
     width: 100%;
     text-shadow: 1px 1px 2px #030303;
     position: relative;
@@ -135,7 +136,7 @@ aside {
 .settingsPanel > table td {
     padding: 2px 10px 2px 10px;
 }
-.closeSettings {
+.closeSettings,.closeRules {
     position: absolute;
     right: 0;
     top: -40px;
@@ -153,6 +154,18 @@ aside {
     animation-duration: .5s;
     animation-fill-mode: forwards;
 }
+.showRules {
+    display: block;
+    animation-name: settingsFadeIn;
+    animation-duration: .5s;
+    animation-fill-mode: forwards;
+}
+
+.fitchRules > h1{
+    font-size: 1rem;
+    margin-top: 30px;
+}
+
 .shortcut {
     font-family: 'Consolas';
 }

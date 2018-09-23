@@ -154,9 +154,15 @@ function handleMouse(event) {
                 return;
 
             if (that.parentElement.classList.contains('settings') || that.classList.contains('closeSettings')) {
-                console.log('show settings')
+                console.log('toggle settings')
                 document.getElementById('settings').classList.toggle('showSettings');
             }
+
+            if (that.classList.contains('ruleDefinitions') || that.classList.contains('closeRules')) {
+                console.log('toggle rules')
+                document.getElementById('fitchRules').classList.toggle('showRules');
+            }
+
 
             if (tooltipToken) {
                 tooltipToken.remove();
@@ -1371,14 +1377,16 @@ window.addEventListener("load", function(){
     editor.addLine('¬∀x∀y(Peter(x) ∧ Hans(y)) → ∃z(Leo(z))');
     editor.addLine('hans = peter');
     editor.addLine('Hans ∨ Peter ∨ Leo');
-    for (var i = 0; i < 15; i++) {
+    for (var i = 0; i < 20; i++) {
         editor.addLine('');
     }
     editor.setSyntaxHighlighting(true);
     editor.checkFitchLines();
     editor.undoStack = [];
 
-    editor.getProof().check();
+    //editor.getProof().check();
+    // show settings panel at start
+    document.getElementById('settings').classList.toggle('showSettings');
 });
 
 

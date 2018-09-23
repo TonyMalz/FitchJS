@@ -478,7 +478,7 @@ class Parser {
                 const prevtoken = this.previous();
                 let asPremise = prevtoken.lexeme;
                 asPremise = asPremise.charAt(0).toUpperCase() + asPremise.slice(1);
-                throw this.error(prevtoken, `Did you mean '${asPremise}' instead of '${prevtoken}' ?`);
+                throw this.error(prevtoken, `Did you mean '${asPremise}' instead of '${prevtoken}'? (Predicates conventionally start with a capital letter)`);
             }
         }
         if(this.match(TokenType.IDENTIFIER)){
