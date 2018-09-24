@@ -40,7 +40,7 @@ class Line {
 			    this.getRuleDom().classList.add('ruleOk');
 			    this.getRuleDom().classList.remove('ruleError');
 			    this.clearHint();
-			   } 
+			} 
 			else {
 			    this.ruleError = this.formula.rule.getError();
 			    const hint = this.ruleError.message;
@@ -50,6 +50,8 @@ class Line {
 			    this.getRuleDom().classList.add('ruleError');
 			}
 		}
+		// check whole proof
+		this.editor.checkProof();
 	}
 	getRuleDom(){
 		if (this.ruleDomElement)
@@ -75,8 +77,10 @@ class Line {
 	}
 	clearHint(){
 		const hint = document.getElementById(`h${this.lineNumber}`);
-		hint.textContent = '';
-		hint.classList.remove('showhint');
+		if (hint) {
+			hint.textContent = '';
+			hint.classList.remove('showhint');
+		}
 	}
 	getTokenTypeFromRuleName(rule=null) {
 	    let op = '';
@@ -143,6 +147,10 @@ class Line {
 				this.editor.enteredIdentifiers.add(token.lexeme);
 			}
 		}
+		let oldRule = null;
+		if (this.formula && this.formula.rule){
+			oldRule = this.formula.rule;
+		}
 		this.formula = new Parser(this.tokens).parse();
 		if (!this.formula)
 			this.error = fitcherror;//XXX
@@ -153,18 +161,20 @@ class Line {
 
 		this.getDom().textContent = this.content;
 		//this.getDom().innerHTML = this.formattedContent;
-		// XXX check rule
 
 		// XXX FIXME: don't use rule selection for error messages
 		if(this.error && this.getDom().nextElementSibling) {
-			this.getDom().nextElementSibling.textContent = this.error.message;
-			this.getDom().nextElementSibling.classList.add('ruleError');
-		} else if(this.getDom().nextElementSibling) {
-			this.getDom().nextElementSibling.textContent = '';
-			this.getDom().nextElementSibling.classList.remove('ruleError');
+			this.getRuleDom().textContent = this.error.message;
+			this.getRuleDom().classList.add('syntaxError');
+			this.getRuleDom().classList.remove('ruleOk', 'ruleOpOk');
+		} else if(this.getDom().nextElementSibling && this.getRuleDom().classList.contains('syntaxError')) {
+			this.getRuleDom().textContent = '';
+			this.getRuleDom().classList.remove('syntaxError','ruleOk', 'ruleOpOk');
 		}
 
 		this.editor.updateProof();
+		if(oldRule)
+			this.setRule(oldRule);
 	}
 	getTokenCssClass(token){
 		let cssClass='';
@@ -677,6 +687,26 @@ class Editor {
 	}
 	getProof(){
 		return this.proof;
+	}
+	checkProof(){
+		let syntaxError = false;
+		for (const line of this.lines) {
+			if (line.error) {
+				syntaxError = true;
+				break;
+			}
+		}
+		const isValid = this.proof.check();
+		if (!syntaxError && isValid) {
+			const el = document.getElementById('proofValid');
+			el.innerHTML = '<span class="smiley">☺</span>  The whole proof is valid &nbsp;&nbsp;✓';
+			el.classList.add('proofOk');
+		} else {
+			const el = document.getElementById('proofValid');
+			el.textContent = 'This proof is not valid yet';
+			el.classList.remove('proofOk');
+		}
+		return isValid;
 	}
 }
 

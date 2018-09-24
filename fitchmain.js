@@ -56,6 +56,11 @@ function handleMouse(event) {
         return;
     }
 
+    if (that.classList.contains('hint')){
+        that.classList.remove('showhint');
+        return;
+    }
+
      // handle rule section via mouse
     if (that.nodeName == 'LI' && that.dataset.rule){
         event.preventDefault();
@@ -140,6 +145,7 @@ function handleMouse(event) {
                 }
             }
             if (that.classList.contains('rule')) {
+                that.contentEditable = 'true';
                 break;
             }
             editor.selectedLines = null;
@@ -158,9 +164,14 @@ function handleMouse(event) {
                 document.getElementById('settings').classList.toggle('showSettings');
             }
 
-            if (that.classList.contains('ruleDefinitions') || that.classList.contains('closeRules')) {
-                console.log('toggle rules')
+            if (that.classList.contains('ruleDefinitions')) {
+                console.log('open rules')
                 document.getElementById('fitchRules').classList.toggle('showRules');
+                document.getElementById('settings').classList.remove('showSettings');
+            }
+            if (that.classList.contains('closeRules')) {
+                console.log('close rules')
+                document.getElementById('fitchRules').classList.remove('showRules');
             }
 
 
@@ -651,10 +662,22 @@ function checkRule(lineNo){
 }
 let tooltipRuleSelection = null;
 function showRuleSelection(that,key) {
+    // remove previous visual states
+    that.classList.remove('ruleOk');
+    that.classList.remove('ruleOpOk');
+    that.classList.remove('ruleError');
+
     const lineNo = parseInt(that.dataset.lineNumber)
     let results = suggestRules('');
     if (results.size == 0)
         return;
+
+    if (key == 'ArrowUp') {
+        selectionIndex--;
+    } else if (key == 'ArrowDown') {
+        selectionIndex++;
+    }
+
     if (selectionIndex < 0) {
         selectionIndex = 0;
     } else if (selectionIndex >= results.size) {
@@ -698,13 +721,14 @@ function showRuleSelection(that,key) {
         line.clearHint();
         line.setRuleName(suggestion);
         highlightFormulaParts(lineNo,line.getTokenTypeFromRuleName(suggestion));
-        SetCaretPosition(that,currentToken.pos + suggestion.length);
+        SetCaretPosition(that,suggestion.length);
     }
     if (key == 'Escape') {
         tooltipRuleSelection.remove();
         tooltipRuleSelection = null;
         currentToken = null;
     }
+
 }
 
 function handleKeyup(event) {
@@ -940,6 +964,7 @@ function handleKeydown(event) {
             console.log('jump to rule selection')
             tabProcessed = true;
             if(that.nextElementSibling) {
+                that.nextElementSibling.contentEditable = 'true';
                 that.nextElementSibling.focus();
             }
             break;
@@ -1118,6 +1143,7 @@ function handleKeydown(event) {
             if (that.textContent.trim().length > 0 && event.ctrlKey === true ) {
                 console.log('jump to rule');
                 if(that.nextElementSibling) {
+                    that.nextElementSibling.contentEditable = 'true';
                     that.nextElementSibling.focus();
                 }
             break;
@@ -1261,6 +1287,7 @@ function handleBlur(event) {
         }
         // disable line selection for rule
         startLineSelectionForRuleLine = null;
+        that.contentEditable = 'false';
 
     }
     if (that.classList.contains('line')) {
@@ -1270,6 +1297,7 @@ function handleBlur(event) {
         line.setSyntaxHighlighting(true);
     }
     editor.checkFitchLines();
+    editor.checkProof();
 }
 
 function handleFocus(event) {
