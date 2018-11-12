@@ -130,6 +130,11 @@ class Line {
 	    	element.nextElementSibling.id = `r${this.lineNumber}`;
 	    	element.nextElementSibling.dataset.lineNumber = this.lineNumber;
 	    }
+	    if (element.nextElementSibling.nextElementSibling){
+	    	//update hint XXX
+	    	element.nextElementSibling.nextElementSibling.id = `h${this.lineNumber}`;
+	    	element.nextElementSibling.nextElementSibling.dataset.lineNumber = this.lineNumber;
+	    }
 	    if (this.formula) {
 	    	this.formula.line = lineNumber;
 	    }
@@ -597,6 +602,10 @@ class Editor {
             if (lines[i].nextElementSibling){
             	lines[i].nextElementSibling.dataset.lineNumber = (i+1);
             	lines[i].nextElementSibling.id = 'r' + (i+1);
+            }
+            if (lines[i].nextElementSibling.nextElementSibling){
+            	lines[i].nextElementSibling.nextElementSibling.dataset.lineNumber = (i+1);
+            	lines[i].nextElementSibling.nextElementSibling.id = 'h' + (i+1);
             }
         }
         

@@ -79,7 +79,7 @@ header select {
 main
 {
     grid-area: editor;
-    font-family: "Consolas";
+    font-family: "Consolas", monospace, sans-serif;
     text-shadow: 1px 1px 2px #030303;
     font-size: 1.3em;
     color: #effcff;

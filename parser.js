@@ -916,7 +916,7 @@ class RuleAndIntro extends Rule{
         for (const term of formula.terms){
             //FIXME check for smaller line no and scope
             for (const sourceTerm of this.sources){
-                if(sourceTerm.line > term.line){
+                if(sourceTerm.line > formula.line){
                     console.error('Source formula must occur before current formula')
                     this.error(3,'Please only select lines that come before the current line');
                     return false;
