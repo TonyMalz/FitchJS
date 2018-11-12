@@ -63,6 +63,8 @@ class Line {
 		this.ruleLines = lines;
 	}
 	showHint(text){
+		if(!bRuleHints)
+			return;
 		const hint = document.getElementById(`h${this.lineNumber}`);
  		
  		const coords = this.getDom().getBoundingClientRect();
@@ -300,6 +302,9 @@ class Line {
 					dimCssClass = 'dim';
 					//cssMainOperand = '';
 				}
+				if(!bHighlightMainOp){
+					cssMainOperand = '';
+				}
 				const insert = `<span class='${cssClass} ${cssMainOperand} ${dimCssClass} ${errorCssClass}'>${token.lexeme}${variable}</span>`;
 				const insertPos = token.pos + offset;
 				const tokenLength = token.lexeme.length;
@@ -309,9 +314,9 @@ class Line {
 		}
 		return content;
 	}
-	setSyntaxHighlighting(on){
+	setSyntaxHighlighting(on,force=false){
 		if (on) {
-			this.getDom().innerHTML = this.formattedContent;
+			this.getDom().innerHTML = force ? this.highlightTokens() : this.formattedContent;
 		} else {
 			this.getDom().textContent = this.content;
 		}
@@ -489,7 +494,7 @@ class Editor {
 			if (type === 'remove'){
 				console.log('undo remove',line);
 				const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
-				newline.setSyntaxHighlighting(true);
+				newline.setSyntaxHighlighting(bSyntaxHighlight);
 				this.undoStack.pop();
 				this.redoStack.push(['remove',line, date]);
 				this.checkFitchLines();
@@ -502,7 +507,7 @@ class Editor {
 				const l = editor.getLine(line.lineNumber);
 				//this.redoStack.push(['add',line, date,event[3]]);
 				l.setContent(line.content);
-				l.setSyntaxHighlighting(true);
+				l.setSyntaxHighlighting(bSyntaxHighlight);
 				SetCaretPosition(l,event[3]);
 			}
 			
@@ -530,7 +535,7 @@ class Editor {
 			if (type === 'add'){
 				console.log('redo add',line);
 				const newline = this.addLine(line.content,line.lineNumber,line.isPremise,line.level,true);
-				newline.setSyntaxHighlighting(true);
+				newline.setSyntaxHighlighting(bSyntaxHighlight);
 				this.checkFitchLines();
 			} else if (type === 'remove') {
 				console.log('redo remove',line);
@@ -539,7 +544,7 @@ class Editor {
 				console.log('redo content',line);
 				const l = editor.getLine(line.lineNumber);
 				l.setContent(line.content);
-				l.setSyntaxHighlighting(true);
+				l.setSyntaxHighlighting(bSyntaxHighlight);
 				SetCaretPosition(l,event[3]);
 			}
 			

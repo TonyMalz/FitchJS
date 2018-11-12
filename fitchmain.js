@@ -89,7 +89,7 @@ function handleMouse(event) {
             tooltipToken.remove();
             tooltipToken = null;
         }
-        if (that.classList.contains('mainOp') && (
+        if (bQuickRule && that.classList.contains('mainOp') && (
             that.classList.contains('tokenAnd') || 
             that.classList.contains('tokenImpl') ||
             that.classList.contains('tokenOr') ||
@@ -254,7 +254,7 @@ function handleMouse(event) {
                     }
                 }
 
-                editor.setSyntaxHighlighting(true);
+                editor.setSyntaxHighlighting(bSyntaxHighlight);
                 editor.checkFitchLines();
             }
             
@@ -302,15 +302,18 @@ function handleMouse(event) {
     }
 }
 
-const suggestTokens = new Map();
-suggestTokens.set("∧ And", '∧');
-suggestTokens.set("v Or", '∨');
-suggestTokens.set("¬ Not", '¬');
-suggestTokens.set("∀ For All", '∀');
-suggestTokens.set("-> Implication", '→');
-suggestTokens.set("<-> Bi-Implication", '↔');
-suggestTokens.set("∃ Exists", '∃');
-suggestTokens.set("⊥ Bottom", '⊥');
+let suggestTokens;
+function initSuggestTokens() {
+    suggestTokens = new Map();
+    suggestTokens.set("∧ And", '∧');
+    suggestTokens.set("v Or", '∨');
+    suggestTokens.set("¬ Not", '¬');
+    suggestTokens.set("∀ For All", '∀');
+    suggestTokens.set("-> Implication", '→');
+    suggestTokens.set("<-> Bi-Implication", '↔');
+    suggestTokens.set("∃ Exists", '∃');
+    suggestTokens.set("⊥ Bottom", '⊥');
+}
 
 const suggestrules = new Map();
 suggestrules.set("∧ And Intro", '∧ Intro:');
@@ -344,14 +347,17 @@ function suggest(search) {
     console.log(search,regex)
 
     const results = new Map();
-    for (const identifier of editor.enteredIdentifiers){
-        // add alreade entered terms
-        suggestTokens.set(identifier,identifier);
-    }
+    if (bAutocomplete) {
+        for (const identifier of editor.enteredIdentifiers){
+            // add already entered terms
+            suggestTokens.set(identifier,identifier);
+        }
+    } 
     for (const [matchstring,token] of suggestTokens){
         if (regex.test(matchstring))
             results.set(token,[matchstring,matchstring.replace(regex,'<b>$1</b>')]);
     }
+    
     console.log('match results:', results)
 
     return results;
@@ -1278,7 +1284,7 @@ function handleBlur(event) {
         }
         // remove highlights/hints
         const line = editor.getLine(lineNo);
-        line.setSyntaxHighlighting(true);
+        line.setSyntaxHighlighting(bSyntaxHighlight);
         line.clearHint();
         // remove tooltip
         if (tooltipRuleSelection) {
@@ -1294,7 +1300,7 @@ function handleBlur(event) {
         const line = editor.getLine(lineNo);
         //update content based on text changes
         line.setContent(that.textContent);
-        line.setSyntaxHighlighting(true);
+        line.setSyntaxHighlighting(bSyntaxHighlight);
     }
     editor.checkFitchLines();
     editor.checkProof();
@@ -1337,6 +1343,8 @@ function handleFocus(event) {
 }
 
 function dimLines(lineNo){
+    if (!bDimLines)
+        return;
     const currentLine = editor.getLine(lineNo);
     currentLine.unDimLine();
     const startLevel = currentLine.level;
@@ -1400,7 +1408,7 @@ function handleProblemChanged(event) {
                 for (var i = 0; i < 20; i++) {
                     editor.addLine('');
                 }
-                editor.setSyntaxHighlighting(true);
+                editor.setSyntaxHighlighting(bSyntaxHighlight);
                 editor.checkFitchLines();
                 editor.undoStack = [];
             break;
@@ -1415,11 +1423,22 @@ function handleProblemChanged(event) {
                 for (var i = 0; i < 20; i++) {
                     editor.addLine('');
                 }
-                editor.setSyntaxHighlighting(true);
+                editor.setSyntaxHighlighting(bSyntaxHighlight);
                 editor.checkFitchLines();
                 editor.undoStack = [];
             break;
             case "1.3":
+                editor = null;
+                editor = new Editor();
+                editor.addPremise('Parent(leo,peter)');
+                editor.addPremise('Female(leo)');
+                editor.addLine('Parent(leo,peter) ∧ Female(leo)');
+                for (var i = 0; i < 20; i++) {
+                    editor.addLine('');
+                }
+                editor.setSyntaxHighlighting(bSyntaxHighlight);
+                editor.checkFitchLines();
+                editor.undoStack = [];
             break;
             case "1.4":
             break;
@@ -1427,10 +1446,62 @@ function handleProblemChanged(event) {
     }
 }
 
+
+
+let bSyntaxHighlight = true;
+let bSyntaxErrors = true;
+let bAutocomplete = true;
+let bHighlightMainOp = true;
+let bDimLines = true;
+let bQuickRule = true;
+let bRuleHints = true;
+
+function handleSettings(event) {
+    switch(event.target.id) {
+        case "cb1":
+            bSyntaxHighlight = !bSyntaxHighlight;
+            for (const line of editor.lines){
+                line.setSyntaxHighlighting(bSyntaxHighlight);
+            }
+        break;
+        case "cb2":
+            bSyntaxErrors = !bSyntaxErrors;
+        break;
+        case "cb3":
+            bAutocomplete = !bAutocomplete;
+            initSuggestTokens();
+        break;
+        case "cb4":
+            bHighlightMainOp = !bHighlightMainOp;
+            for (const line of editor.lines){
+                line.setSyntaxHighlighting(bSyntaxHighlight,true);
+            }
+        break;
+        case "cb5":
+            bDimLines = !bDimLines;
+            if (!bDimLines) {
+                for (const line of editor.lines){
+                    line.unDimLine();
+                }
+            }
+        break;
+        case "cb6":
+            bQuickRule = !bQuickRule;
+        break;
+        case "cb7":
+            bRuleHints = !bRuleHints;
+        break;
+    }
+}
+
 let editor = new Editor();
 window.addEventListener("load", function(){
+    initSuggestTokens();
     const problem = document.getElementById('currentProblem');
     problem.addEventListener('change', handleProblemChanged);
+    const settings = document.getElementById('settings');
+    settings.addEventListener('change', handleSettings);
+
 
     const ed = document.getElementById('editor');
     
@@ -1455,7 +1526,7 @@ window.addEventListener("load", function(){
     for (var i = 0; i < 20; i++) {
         editor.addLine('');
     }
-    editor.setSyntaxHighlighting(true);
+    editor.setSyntaxHighlighting(bSyntaxHighlight);
     editor.checkFitchLines();
     editor.undoStack = [];
 
@@ -1585,6 +1656,8 @@ function showCaretPos(event) {
 
 
 function highlightFormulaParts(lineNumber,...matches){
+    if(!bRuleHints)
+        return;
     const matchOperatorClassName = ' highlightOperatorOk';
     const matchFormulaClassName = ' highlightFormulaOk';
     const line = editor.getLine(lineNumber);

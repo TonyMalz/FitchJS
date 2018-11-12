@@ -510,7 +510,7 @@ aside::-webkit-scrollbar-thumb {
 
 .tokenForall, .tokenExists {
     color: #fd971f;
-    cursor: pointer;
+    /*cursor: pointer;*/
 }
 
 .tokenTerm {
