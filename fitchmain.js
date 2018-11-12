@@ -1383,8 +1383,55 @@ function dimLines(lineNo){
     }
 }
 
-const editor = new Editor();
+function handleProblemChanged(event) {
+    console.log("Problem changed to:", event.target.value);
+    if (event.target.value) {
+        switch (event.target.value){
+            case "1.1":
+                editor = null;
+                editor = new Editor();
+                editor.addPremise('Peter');
+                editor.addPremise('Leo');
+                editor.addLine('Peter ∧ Leo');
+                editor.addLine('∀x∀y(Peter(x,y) ∧ Hans(y)) → ∃z(Leo(z))');
+                editor.addLine('¬∀x∀y(Peter(x) ∧ Hans(y)) → ∃z(Leo(z))');
+                editor.addLine('hans = peter');
+                editor.addLine('Hans ∨ Peter ∨ Leo');
+                for (var i = 0; i < 20; i++) {
+                    editor.addLine('');
+                }
+                editor.setSyntaxHighlighting(true);
+                editor.checkFitchLines();
+                editor.undoStack = [];
+            break;
+            case "1.2":
+                editor = null;
+                editor = new Editor();
+                editor.addPremise('Parent(leo,peter)');
+                editor.addPremise('Female(leo)');
+                editor.addPremise('∀x∀y((Parent(x,y) ∧ Female(x)) → Mother(x,y))');
+                editor.addLine('Parent(leo,peter) ∧ Female(leo)');
+                editor.addLine('Mother(leo,peter)');
+                for (var i = 0; i < 20; i++) {
+                    editor.addLine('');
+                }
+                editor.setSyntaxHighlighting(true);
+                editor.checkFitchLines();
+                editor.undoStack = [];
+            break;
+            case "1.3":
+            break;
+            case "1.4":
+            break;
+        }
+    }
+}
+
+let editor = new Editor();
 window.addEventListener("load", function(){
+    const problem = document.getElementById('currentProblem');
+    problem.addEventListener('change', handleProblemChanged);
+
     const ed = document.getElementById('editor');
     
     ed.addEventListener('paste', handlePaste);

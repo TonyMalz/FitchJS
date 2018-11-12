@@ -372,6 +372,7 @@ class Editor {
 		this.lines = [];
 		
 		this.editorNode = document.getElementById('editor');
+		this.editorNode.innerHTML='';
 		this.enteredIdentifiers = new Set(); //for autocomplete
 
 		this.numPremises = 0;
