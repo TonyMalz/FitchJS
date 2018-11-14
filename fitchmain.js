@@ -309,6 +309,7 @@ function initSuggestTokens() {
     suggestTokens.set("v Or", '∨');
     suggestTokens.set("¬ Not", '¬');
     suggestTokens.set("∀ For All", '∀');
+    suggestTokens.set("∀ Universal", '∀');
     suggestTokens.set("-> Implication", '→');
     suggestTokens.set("<-> Bi-Implication", '↔');
     suggestTokens.set("∃ Exists", '∃');
