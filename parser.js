@@ -372,7 +372,7 @@ class Parser {
     e4(){
         if (this.match(TokenType.NOT)) {
             const operator = this.previous();
-            const right = this.e0();
+            const right = this.e3();
             return new FormulaNot(operator, right);
         }
         return this.e5();
